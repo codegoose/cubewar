@@ -90,6 +90,6 @@ vec3 promo_outline(vec3 color) {
 void main() {
 	vec3 position = texture2D(deferred_position_buffer, sh_uv).rgb;
 	final_color = vec4(get_diffuse(sh_uv), 1);
-	final_color = vec4(promo_outline(final_color.rgb), final_color.a);
+	// final_color = vec4(promo_outline(final_color.rgb), final_color.a);
 	final_color = vec4(apply_gamma(final_color.rgb), 1);
 }

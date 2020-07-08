@@ -41,7 +41,7 @@ void main() {
 	bool enable_back_face = working_encoded_voxel_faces > 0;
 	if (enable_top_face) {
 		geometry.normal = vec3(0, 0, 1);
-		geometry.texture_coords.z = 0;
+		geometry.texture_coords.z = 1;
 		prepare_next_stage_info(vec3(-.5, -.5, .5));
 		geometry.texture_coords.x = 0;
 		geometry.texture_coords.y = 1;
@@ -67,7 +67,7 @@ void main() {
 	}
 	if (enable_bottom_face) {
 		geometry.normal = vec3(0, 0, -1);
-		geometry.texture_coords.z = 2;
+		geometry.texture_coords.z = 1;
 		prepare_next_stage_info(vec3(-.5, .5, -.5));
 		geometry.texture_coords.x = 0;
 		geometry.texture_coords.y = 0;
@@ -148,7 +148,7 @@ void main() {
 	}
 	if (enable_front_face) {
 		geometry.normal = vec3(0, 1, 0);
-		geometry.texture_coords.z = 0;
+		geometry.texture_coords.z = 1;
 		prepare_next_stage_info(vec3(-.5, .5, .5));
 		geometry.texture_coords.x = 1;
 		geometry.texture_coords.y = 0;
