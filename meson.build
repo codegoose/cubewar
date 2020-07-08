@@ -35,7 +35,12 @@ zlib = compiler.find_library('zlib', dirs: library_dir)
 
 executable(
 	'cubewar',
-	'main.cpp',
+	'gpu.cpp',
+	'misc.cpp',
+	'physics.cpp',
+	'pov.cpp',
+	'sys.cpp',
+	'core.cpp',
 	include_directories : include_dir,
 	dependencies : [
 		sdl2,
