@@ -1,4 +1,3 @@
-#include <rang.hpp>
 #include "misc.h"
 #include <fstream>
 #include <iostream>
@@ -6,17 +5,17 @@
 std::optional<std::vector<char>> cw::misc::read_file(const std::filesystem::path &path) {
 	std::ifstream in(path.string(), std::ios::binary);
 	if (!in.is_open()) {
-		std::cout << rang::fg::yellow << "Failed to open file for reading: " << path.string() << rang::fg::reset << std::endl;
+		std::cout << "Failed to open file for reading: " << path.string() << std::endl;
 		return std::nullopt;
 	}
 	std::vector<char> content(std::filesystem::file_size(path));
 	if (!content.size()) return { };
 	in.read(content.data(), content.size());
-	if (in.tellg() == content.size()) {
+	if (static_cast<size_t>(in.tellg()) == content.size()) {
 		std::cout << "File contents loaded: \"" << path.relative_path().string() << "\" (" << content.size() << " bytes)" << std::endl;
 		return content;
 	}
-	std::cout << rang::fg::red << "Unable to read entire file contents: \"" << path.relative_path().string() << "\"." << rang::fg::reset << std::endl;
+	std::cout << "Unable to read entire file contents: \"" << path.relative_path().string() << "\"." << std::endl;
 	return std::nullopt;
 }
 

@@ -1,15 +1,16 @@
-#include <rang.hpp>
 #include "gpu.h"
 #include "misc.h"
+#include "sys.h"
+#include "pov.h"
+
 #include <iostream>
 #include <filesystem>
 #include <optional>
-#define GLEW_STATIC
-#include <gl/glew.h>
 #include <assert.h>
 
 namespace cw::gpu {
-	std::map<std::string, GLuint> programs;
+
+	bool enable_wireframe = false;
 	GLuint primary_render_buffer = 0, primary_frame_buffer = 0;
 	GLuint deferred_surface_render_target = 0, deferred_position_render_target = 0, deferred_material_render_target = 0;
 	GLuint screen_quad_vertex_array = 0, screen_quad_vertex_buffer = 0;
@@ -22,20 +23,26 @@ namespace cw::gpu {
 	void generate_render_targets();
 	bool initialize();
 	void shutdown();
+	void render();
 }
 
+namespace cw::core {
+	void on_deferred_render();
+}
+
+std::map<std::string, GLuint> cw::gpu::programs;
 glm::ivec2 cw::gpu::render_target_size { 0, 0 };
 
 void cw::gpu::print_program_info_log(GLuint id) {
 	GLint log_length;
 	glGetProgramiv(id, GL_INFO_LOG_LENGTH, &log_length);
 	if (!log_length) {
-		std::cout << rang::fg::yellow << "GL program info log is blank." << rang::fg::reset << std::endl;
+		std::cout << "GL program info log is blank." << std::endl;
 		return;
 	}
 	std::vector<char> log(log_length);
 	glGetProgramInfoLog(id, log.size(), 0, log.data());
-	std::cout << rang::fg::red << log.data() << rang::fg::reset << std::endl;
+	std::cout << log.data() << std::endl;
 }
 
 GLuint cw::gpu::make_program_from_shaders(const std::vector<GLuint> &shaders) {
@@ -58,12 +65,12 @@ void cw::gpu::print_shader_info_log(GLuint id) {
 	GLint log_length;
 	glGetShaderiv(id, GL_INFO_LOG_LENGTH, &log_length);
 	if (!log_length) {
-		std::cout << rang::fg::yellow << "GL shader info log is blank." << rang::fg::reset << std::endl;
+		std::cout << "GL shader info log is blank." << std::endl;
 		return;
 	}
 	std::vector<char> log(log_length);
 	glGetShaderInfoLog(id, log.size(), 0, log.data());
-	std::cout << rang::fg::red << log.data() << rang::fg::reset << std::endl;
+	std::cout << log.data() << std::endl;
 }
 
 GLuint cw::gpu::make_shader_from_file(const std::filesystem::path &path) {
@@ -74,7 +81,7 @@ GLuint cw::gpu::make_shader_from_file(const std::filesystem::path &path) {
 	else if (path.extension().string() == ".fs") type = GL_FRAGMENT_SHADER;
 	else if (path.extension().string() == ".gs") type = GL_GEOMETRY_SHADER;
 	else {
-		std::cout << rang::fg::yellow << "File does not have a valid GL shader extension: " << path.string() << rang::fg::reset << std::endl;
+		std::cout << "File does not have a valid GL shader extension: " << path.string() << std::endl;
 		return 0;
 	}
 	GLuint id = glCreateShader(type);
@@ -105,12 +112,12 @@ std::optional<std::map<std::string, GLuint>> cw::gpu::make_programs_from_directo
 			auto shader = make_shader_from_file(path.string() + pair.first + extension);
 			if (!shader) {
 				std::cout << "GL shader: " << pair.first << "[" << extension << "] -> ";
-				std::cout << rang::fg::red << "Failed to compile." << rang::fg::reset << std::endl;
+				std::cout << "Failed to compile." << std::endl;
 				success = false;
 				break;
 			}
 			std::cout << "GL shader: " << pair.first << "[" << extension << "] -> ";
-			std::cout << rang::fg::green << "Compiled." << rang::fg::reset << " (" << shader << ")" << std::endl;
+			std::cout << "Compiled." << " (" << shader << ")" << std::endl;
 			all_shaders.push_back(shader);
 			shaders.push_back(shader);
 		}
@@ -118,12 +125,12 @@ std::optional<std::map<std::string, GLuint>> cw::gpu::make_programs_from_directo
 		auto program = make_program_from_shaders(shaders);
 		if (!program) {
 			std::cout << "GL program: " << pair.first << " -> ";
-			std::cout << rang::fg::red << "Failed to link." << rang::fg::reset << std::endl;
+			std::cout << "Failed to link." << std::endl;
 			success = false;
 			break;
 		}
 		std::cout << "GL program: " << pair.first << " -> ";
-		std::cout << rang::fg::green << "Linked." << rang::fg::reset << " (" << program << ")" << std::endl;
+		std::cout << "Linked." << " (" << program << ")" << std::endl;
 		programs[pair.first] = program;
 	}
 	for (auto &shader : all_shaders) glDeleteShader(shader);
@@ -206,7 +213,7 @@ void cw::gpu::generate_render_targets() {
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, render_target_size.x, render_target_size.y);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, primary_render_buffer);
 	assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
-	std::cout << rang::fg::cyan << "All render targets are ready. (" << render_target_size.x << " by " << render_target_size.y << ") " << rang::fg::reset << std::endl;
+	std::cout << "All render targets are ready. (" << render_target_size.x << " by " << render_target_size.y << ") " << std::endl;
 	GLenum fragment_buffers[] = {
 		GL_COLOR_ATTACHMENT0,
 		GL_COLOR_ATTACHMENT1,
@@ -216,15 +223,68 @@ void cw::gpu::generate_render_targets() {
 }
 
 bool cw::gpu::initialize() {
-	auto result = make_programs_from_directory("glsl/");
+	auto result = make_programs_from_directory(sys::bin_path().string() + "glsl/");
 	if (!result) {
-		std::cout << rang::fg::red << "Failed to create GPU programs." << rang::fg::reset << std::endl;
+		std::cout << "Failed to create GPU programs." << std::endl;
 		return false;
 	}
 	programs = *result;
+	make_screen_quad();
 	return true;
 }
 
 void cw::gpu::shutdown() {
 
+}
+
+void cw::gpu::render() {
+	glBindFramebuffer(GL_FRAMEBUFFER, primary_frame_buffer);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, render_target_size.x, render_target_size.y);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	if (enable_wireframe) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glLineWidth(2);
+	} else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	core::on_deferred_render();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glViewport(0, 0, render_target_size.x, render_target_size.y);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glUseProgram(programs["screen"]);
+	static float saturation_power = 1;
+	static float gamma_power = 1.5;
+	static bool show_render_buffers = false;
+	GLint pixel_w_location = glGetUniformLocation(programs["screen"], "pixel_w");
+	GLint pixel_h_location = glGetUniformLocation(programs["screen"], "pixel_h");
+	GLint saturation_power_location = glGetUniformLocation(programs["screen"], "saturation_power");
+	GLint gamma_power_location = glGetUniformLocation(programs["screen"], "gamma_power");
+	GLint near_plane_location = glGetUniformLocation(programs["screen"], "near_plane");
+	GLint far_plane_location = glGetUniformLocation(programs["screen"], "far_plane");
+	if (pixel_w_location != -1) glUniform1f(pixel_w_location, 1.f / static_cast<float>(render_target_size.x));
+	if (pixel_h_location != -1) glUniform1f(pixel_h_location, 1.f / static_cast<float>(render_target_size.y));
+	if (saturation_power_location != -1) glUniform1f(saturation_power_location, saturation_power);
+	if (gamma_power_location != -1) glUniform1f(gamma_power_location, gamma_power);
+	if (near_plane_location != -1) glUniform1f(near_plane_location, pov::near_plane_distance);
+	if (far_plane_location != -1) glUniform1f(far_plane_location, pov::far_plane_distance);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, deferred_surface_render_target);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, deferred_position_render_target);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, deferred_material_render_target);
+	// glActiveTexture(GL_TEXTURE3);
+	// glBindTexture(GL_TEXTURE_2D_ARRAY, texture_voxel_array);
+	// glActiveTexture(GL_TEXTURE4);
+	// glBindTexture(GL_TEXTURE_2D_ARRAY, texture_256_array);
+	// glActiveTexture(GL_TEXTURE5);
+	// glBindTexture(GL_TEXTURE_2D_ARRAY, texture_512_array);
+	glBindVertexArray(screen_quad_vertex_array);
+	glBindBuffer(GL_ARRAY_BUFFER, screen_quad_vertex_buffer);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 }

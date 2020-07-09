@@ -1,4 +1,3 @@
-#include <rang.hpp>
 #include <iostream>
 #define SDL_MAIN_HANDLED
 #include <sdl.h>
@@ -12,8 +11,14 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <glm/vec2.hpp>
+#include <filesystem>
+#include <vector>
+#include <string.h>
+
+#include "sys.h"
 
 namespace cw::sys {
+	std::vector<std::string> args;
 	bool sdl_initialized = false;
 	SDL_Window *sdl_window = 0;
 	SDL_GLContext gl_context;
@@ -22,7 +27,7 @@ namespace cw::sys {
 	bool imgui_sdl_impl_initialized = false;
 	bool imgui_opengl3_impl_initialized = false;
 	bool enet_initialized = false;
-	const uint64_t fixed_steps_per_second = 20;
+	const uint64_t fixed_steps_per_second = 60;
 	uint64_t performance_frequency = 0;
 	uint64_t last_performance_counter = 0;
 	double variable_time_delta = 0;
@@ -37,8 +42,6 @@ namespace cw::sys {
 	void kill();
 }
 
-using namespace cw::sys;
-
 namespace cw::core {
 	void initialize();
 	void shutdown();
@@ -52,11 +55,16 @@ namespace cw::gpu {
 	void shutdown();
 	void generate_render_targets();
 	extern glm::ivec2 render_target_size;;
+	void render();
 }
 
 namespace cw::physics {
 	void initialize();
 	void shutdown();
+}
+
+std::filesystem::path cw::sys::bin_path() {
+	return std::filesystem::path(args[0]).remove_filename();
 }
 
 bool cw::sys::tick() {
@@ -68,7 +76,7 @@ bool cw::sys::tick() {
 		/*
 		else if (os_event.type == SDL_MOUSEMOTION) {
 			if (SDL_GetRelativeMouseMode() != SDL_TRUE) continue;
-			// cw::pov::orientation += glm::fvec2(os_event.motion.xrel, os_event.motion.yrel) * 0.1f;
+			// pov::orientation += glm::fvec2(os_event.motion.xrel, os_event.motion.yrel) * 0.1f;
 		}
 		else if (os_event.type == SDL_KEYDOWN) {
 			if (os_event.key.keysym.sym == SDLK_LCTRL) {
@@ -104,15 +112,13 @@ bool cw::sys::tick() {
 	fixed_step_counter_remainder += elapsed_performance_counter;
 	uint32_t num_fixed_steps_this_i = 0;
 	while (fixed_step_counter_remainder >= num_performance_counters_per_fixed_step) {
-		cw::core::on_fixed_step(fixed_step_time_delta);
+		core::on_fixed_step(fixed_step_time_delta);
 		fixed_step_performance_counter += num_performance_counters_per_fixed_step;
 		fixed_step_counter_remainder -= num_performance_counters_per_fixed_step;
 		num_fixed_steps_this_i++;
 		current_tick_iteration++;
 		if (num_fixed_steps_this_i >= 10) {
-			std::cout << rang::bg::yellow << rang::fg::black;
-			std::cout << "Fixed update is saturated. Accumulated " << fixed_step_counter_remainder << " on tick #" << current_tick_iteration << ". " << num_fixed_steps_this_i << " steps this frame.";
-			std::cout << rang::bg::reset << rang::fg::reset << std::endl;
+			std::cout << "Fixed update is saturated. Accumulated " << fixed_step_counter_remainder << " on tick #" << current_tick_iteration << ". " << num_fixed_steps_this_i << " steps this frame." << std::endl;
 			break;
 		}
 	}
@@ -123,17 +129,18 @@ bool cw::sys::tick() {
 	const uint64_t next_fixed_step_expected_counter = fixed_step_performance_counter + num_performance_counters_per_fixed_step;
 	if (performance_counter >= next_fixed_step_expected_counter) {
 		interpolation_delta = 1;
-		std::cout << rang::fg::yellow << "Interpolation not possible this frame." << rang::fg::reset << std::endl;
+		std::cout << "Interpolation not possible this frame." << std::endl;
 	}
 	else {
 		const uint64_t progress_towards_next_fixed_step = (fixed_step_performance_counter + num_performance_counters_per_fixed_step) - performance_counter;
 		interpolation_delta = 1.0 - (static_cast<double>(progress_towards_next_fixed_step) / static_cast<double>(num_performance_counters_per_fixed_step));
 	}
-	cw::core::on_update(variable_time_delta, interpolation_delta);
+	core::on_update(variable_time_delta, interpolation_delta);
+	gpu::render();
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(sdl_window);
 	ImGui::NewFrame();
-	cw::core::on_imgui();
+	core::on_imgui();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(sdl_window);
@@ -149,7 +156,7 @@ void cw::sys::kill() {
 	}
 	if (imgui_opengl3_impl_initialized) {
 		ImGui_ImplOpenGL3_Shutdown();
-		std::cout << "Cleaned up ImGui OpenGL implemenation." << std::endl;
+		std::cout << "Cleaned up ImGui OpenGL implementation." << std::endl;
 	}
 	if (imgui_sdl_impl_initialized) {
 		ImGui_ImplSDL2_Shutdown();
@@ -183,24 +190,30 @@ void cw::sys::kill() {
 	}
 }
 
-int main() {
+int main(int c, char **v) {
+	for (int i = 0; i < c; i++) {
+		std::cout << "v[" << i << "] -> " << v[i] << std::endl;
+		cw::sys::args.push_back(v[i]);
+	}
+	std::cout << "Working Area: " << std::filesystem::current_path() << std::endl;
+	std::cout << "Binary Path: " << cw::sys::bin_path() << std::endl;
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
-		std::cout << rang::fg::red << "Failed to initialize SDL2." << rang::fg::reset << std::endl;
+		std::cout << "Failed to initialize SDL2." << std::endl;
 		return 1;
 	} else std::cout << "SDL2 subsystems are ready." << std::endl;
-	sdl_initialized = true;
+	cw::sys::sdl_initialized = true;
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 768, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
-	if (!sdl_window) {
-		kill();
+	cw::sys::sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 768, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
+	if (!cw::sys::sdl_window) {
+		cw::sys::kill();
 		return 2;
 	}
-	gl_context = SDL_GL_CreateContext(sdl_window);
-	if (!gl_context) {
-		std::cout << rang::fg::red << "Failed to create OpenGL context." << rang::fg::reset << std::endl;
-		kill();
+	cw::sys::gl_context = SDL_GL_CreateContext(cw::sys::sdl_window);
+	if (!cw::sys::gl_context) {
+		std::cout << "Failed to create OpenGL context." << std::endl;
+		cw::sys::kill();
 		return 3;
 	}
 	else std::cout << "OpenGL context created: " << glGetString(GL_VERSION) << " (" << glGetString(GL_RENDERER) << ")" << std::endl;
@@ -209,67 +222,69 @@ int main() {
 		glewExperimental = true;
 		if (glewInit()) {
 			std::cout << "Failed to wrangle OpenGL extensions." << std::endl;
-			kill();
+			cw::sys::kill();
 			return 4;
 		} else std::cout << "OpenGL extensions wrangled." << std::endl;
 		glew_init_already = true;
 	}
-	nvg_context = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
-	if (!nvg_context) {
-		std::cout << rang::fg::red << "Failed to create NanoVG context." << rang::fg::reset << std::endl;
-		kill();
+	cw::sys::nvg_context = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
+	if (!cw::sys::nvg_context) {
+		std::cout << "Failed to create NanoVG context." << std::endl;
+		cw::sys::kill();
 		return 5;
 	} else std::cout << "NanoVG context is ready." << std::endl;
-	imgui_context = ImGui::CreateContext();
-	if (!imgui_context) {
-		std::cout << rang::fg::red << "Failed to create ImGui context." << rang::fg::reset << std::endl;
-		kill();
+	cw::sys::imgui_context = ImGui::CreateContext();
+	if (!cw::sys::imgui_context) {
+		std::cout << "Failed to create ImGui context." << std::endl;
+		cw::sys::kill();
 		return 6;
 	}
 	std::cout << "ImGui context is ready." << std::endl;
-	if (!ImGui_ImplSDL2_InitForOpenGL(sdl_window, gl_context)) {
-		imgui_sdl_impl_initialized = false;
-		std::cout << rang::fg::red << "Failed to prepare ImGui context for SDL2 input." << rang::fg::reset << std::endl;
-		kill();
+	if (!ImGui_ImplSDL2_InitForOpenGL(cw::sys::sdl_window, cw::sys::gl_context)) {
+		cw::sys::imgui_sdl_impl_initialized = false;
+		std::cout << "Failed to prepare ImGui context for SDL2 input." << std::endl;
+		cw::sys::kill();
 		return 7;
 	}
-	imgui_sdl_impl_initialized = true;
+	cw::sys::imgui_sdl_impl_initialized = true;
 	if (!ImGui_ImplOpenGL3_Init("#version 130")) {
-		imgui_opengl3_impl_initialized = false;
-		std::cout << rang::fg::red << "Failed to prepare ImGui context for OpenGL rendering." << rang::fg::reset << std::endl;
-		kill();
+		cw::sys::imgui_opengl3_impl_initialized = false;
+		std::cout << "Failed to prepare ImGui context for OpenGL rendering." << std::endl;
+		cw::sys::kill();
 		return 8;
 	}
-	imgui_opengl3_impl_initialized = true;
+	cw::sys::imgui_opengl3_impl_initialized = true;
 	ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguisb.ttf", 16);
 	ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguisb.ttf", 20);
 	ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\seguisb.ttf", 24);
+	static std::string imgui_ini_filename = cw::sys::bin_path().string() + "imgui.ini";
+	std::cout << "ImGui settings file: \"" << imgui_ini_filename << "\"" << std::endl;
+	ImGui::GetIO().IniFilename = imgui_ini_filename.data();
 	std::cout << "Integrated ImGui with SDL2 and OpenGL." << std::endl;
 	if (enet_initialize() < 0) {
-		enet_initialized = false;
-		std::cout << rang::fg::red << "Failed to startup ENet." << rang::fg::reset << std::endl;
-		kill();
+		cw::sys::enet_initialized = false;
+		std::cout << "Failed to startup ENet." << std::endl;
+		cw::sys::kill();
 		return 9;
 	}
 	std::cout << "ENet is ready." << std::endl;
-	enet_initialized = true;
+	cw::sys::enet_initialized = true;
 	if (!cw::gpu::initialize()) {
-		kill();
+		cw::sys::kill();
 		return 10;
 	}
 	cw::physics::initialize();
 	cw::core::initialize();
-	SDL_ShowWindow(sdl_window);
+	SDL_ShowWindow(cw::sys::sdl_window);
 	if (SDL_GL_SetSwapInterval(-1) != 0) {
-		std::cout << rang::fg::yellow << "Immediate late buffer swaps are not supported. Using regular sync." << rang::fg::reset << std::endl;
+		std::cout << "Immediate late buffer swaps are not supported. Using regular sync." << std::endl;
 		SDL_GL_SetSwapInterval(1);
 	}
-	while (tick());
-	SDL_HideWindow(sdl_window);
-	// shutdown_game_components();
+	while (cw::sys::tick());
+	SDL_HideWindow(cw::sys::sdl_window);
 	cw::core::shutdown();
 	cw::physics::shutdown();
 	cw::gpu::shutdown();
-	kill();
+	cw::sys::kill();
 	return 0;
 }
