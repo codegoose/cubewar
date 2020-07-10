@@ -33,7 +33,7 @@ void cw::textures::load_all() {
 }
 
 void cw::textures::load_voxel() {
-	const int expected_size = 16;
+	const int expected_size = 32;
 	if (voxel_array) glDeleteTextures(1, &voxel_array);
 	voxel_indices.clear();
 	int num_files = 0;
@@ -65,11 +65,11 @@ void cw::textures::load_voxel() {
 		num_files--;
 		assert(num_files >= 0);
 	}
-	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
-	GLfloat max_anisotropic_filter_value;
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic_filter_value);
-	glTextureParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropic_filter_value);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+	//glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+	//GLfloat max_anisotropic_filter_value;
+	//glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic_filter_value);
+	//glTextureParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropic_filter_value);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
