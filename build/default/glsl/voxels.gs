@@ -21,9 +21,20 @@ out geometry_data {
 {{{ VOXEL TEXTURE INDICES }}}
 
 float voxel_z() {
-	if (voxel_material_id[0] == 1) return vti_gravel;
-	if (voxel_material_id[0] == 2) return vti_grass;
-	if (voxel_material_id[0] == 3) return vti_brick;
+	if (voxel_material_id[0] == 1) return vti_bedrock;
+	if (voxel_material_id[0] == 2) return vti_stone;
+	if (voxel_material_id[0] == 3) return vti_sand;
+	if (voxel_material_id[0] == 4) {
+		if (geometry.normal == vec3(0, 0, 1)) return vti_sandstone_top;
+		else if (geometry.normal == vec3(0, 0, -1)) return vti_sandstone_bottom;
+		else return vti_sandstone_normal;
+	}
+	if (voxel_material_id[0] == 5) return vti_dirt;
+	if (voxel_material_id[0] == 6) {
+		if (geometry.normal == vec3(0, 0, 1)) return vti_grass_top;
+		else if (geometry.normal == vec3(0, 0, -1)) return vti_dirt;
+		else return vti_grass_side;
+	}
 }
 
 void prepare_next_stage_info(vec3 vertex_location) {

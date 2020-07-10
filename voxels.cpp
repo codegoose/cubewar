@@ -10,7 +10,6 @@
 #include <glm/matrix.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <unordered_map>
 
 namespace cw::voxels {
 
@@ -62,9 +61,9 @@ void cw::voxels::update_gpu_buffers() {
 		for (int y = 0; y < 100; y++) {
 			for (int x = 0; x < 100; x++) {
 				const int index = (z * 10000) + (y * 100) + x;
-				if (z == 50 && x >= 48 && x <= 52 && y >= 48 && y <= 52) total_point_region[index].id = static_cast<uint16_t>(id::brick);
-				if (z == 51 && x >= 49 && x <= 51 && y >= 49 && y <= 51) total_point_region[index].id = static_cast<uint16_t>(id::gravel);
-				if (z <= 49) total_point_region[index].id = static_cast<uint16_t>(id::grass);
+				if (z == 50 && x >= 48 && x <= 52 && y >= 48 && y <= 52) total_point_region[index].id = static_cast<uint16_t>(id::stone);
+				if (z >= 51 && z <= 52 && x >= 49 && x <= 51 && y >= 49 && y <= 51) total_point_region[index].id = static_cast<uint16_t>(id::sandstone);
+				if (z <= 49) total_point_region[index].id = static_cast<uint16_t>(id::sand);
 			}
 		}
 	}
@@ -89,16 +88,13 @@ void cw::voxels::update_gpu_buffers() {
 				if (y == 0 || total_point_region[neighbor_index_behind].id != 0) face_data -= 1;
 				if (!face_data) continue;
 				culled_point_cache.push_back({
-					x - 50.f,
-					y - 50.f,
-					z - 50.f,
-					static_cast<float>(face_data),
-					static_cast<float>(total_point_region[index].id)
+					static_cast<float>(x), static_cast<float>(y), static_cast<float>(z),
+					static_cast<float>(face_data), static_cast<float>(total_point_region[index].id)
 				});
-				static btBoxShape half_voxel_box_shape(btVector3(1, 1, 1));
+				static btBoxShape half_voxel_box_shape(btVector3(0.5, 0.5, 0.5));
 				btTransform transform;
 				transform.setIdentity();
-				transform.setOrigin(physics::to(-50.0f + glm::vec3(x, y, z)));
+				transform.setOrigin(physics::to(glm::vec3(x, y, z)));
 				total_point_region[index].motion_state = new btDefaultMotionState(transform);
 				total_point_region[index].body = new btRigidBody(0, total_point_region[index].motion_state, &half_voxel_box_shape);
 				physics::dynamics_world->addRigidBody(total_point_region[index].body, 1, 2);

@@ -3,8 +3,11 @@
 namespace cw::voxels {
 	enum class id {
 		null = 0,
-		gravel = 1,
-		grass = 2,
-		brick = 3
+		bedrock = 1,
+		stone = 2,
+		sand = 3,
+		sandstone = 4,
+		dirt = 5,
+		grass = 6
 	};
 }

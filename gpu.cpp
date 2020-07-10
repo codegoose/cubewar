@@ -12,7 +12,6 @@
 #include <string.h>
 #include <assert.h>
 #include <fmt/format.h>
-#include <magic_enum.hpp>
 
 namespace cw::gpu {
 
@@ -100,16 +99,9 @@ void cw::gpu::perform_shader_preprocessor(const std::filesystem::path &path, std
 	if (position == std::string::npos) return;
 	std::cout << "Writing runtime-generated VTI constants to shader: \"" << path.string() << "\"" << std::endl;
 	std::string runtime_vti_reflect;
-	constexpr auto voxel_names = magic_enum::enum_names<voxels::id>();
-	constexpr std::size_t voxel_names_num = magic_enum::enum_count<voxels::id>();
-	for (size_t i = 0; i < voxel_names_num; i++) {
-		const auto name = static_cast<std::string>(voxel_names[i]);
-		if (name == "null") continue;
-		if (textures::voxel_indices.find(name) == textures::voxel_indices.end()) {
-			std::cout << "No matching texture found for VTI: \"" << name << "\"" << std::endl;
-			continue;
-		}
-		const auto new_line = fmt::format("const float vti_{} = {};", name, textures::voxel_indices[name]);
+	for (auto &voxel_texture_name : textures::voxel_indices) {
+		if (voxel_texture_name.first == "null") continue;
+		const auto new_line = fmt::format("const float vti_{} = {};", voxel_texture_name.first, voxel_texture_name.second);
 		runtime_vti_reflect += new_line + "\n";
 		std::cout << " + " << new_line << std::endl;
 	}
@@ -196,7 +188,9 @@ void cw::gpu::make_screen_quad() {
 		1, -1, 1, 0,
 	};
 	glGenVertexArrays(1, &screen_quad_vertex_array);
+	assert(screen_quad_vertex_array);
 	glGenBuffers(1, &screen_quad_vertex_buffer);
+	assert(screen_quad_vertex_buffer);
 	glBindVertexArray(screen_quad_vertex_array);
 	glBindBuffer(GL_ARRAY_BUFFER, screen_quad_vertex_buffer);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
@@ -304,8 +298,7 @@ void cw::gpu::render() {
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glUseProgram(programs["screen"]);
 	static float saturation_power = 1;
-	static float gamma_power = 1.5;
-	static bool show_render_buffers = false;
+	static float gamma_power = 1.2;
 	GLint pixel_w_location = glGetUniformLocation(programs["screen"], "pixel_w");
 	GLint pixel_h_location = glGetUniformLocation(programs["screen"], "pixel_h");
 	GLint saturation_power_location = glGetUniformLocation(programs["screen"], "saturation_power");

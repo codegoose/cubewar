@@ -66,6 +66,10 @@ namespace cw::physics {
 	void shutdown();
 }
 
+namespace cw::local_player {
+	extern bool binary_input[4];
+}
+
 std::filesystem::path cw::sys::bin_path() {
 	return std::filesystem::path(args[0]).remove_filename();
 }
@@ -82,19 +86,15 @@ bool cw::sys::tick() {
 		} else if (os_event.type == SDL_KEYDOWN) {
 			if (os_event.key.keysym.sym == SDLK_F1 && os_event.key.repeat == 0) enable_mouse_grab = !enable_mouse_grab;
 			if (os_event.key.keysym.sym == SDLK_F2 && os_event.key.repeat == 0) SDL_SetWindowFullscreen(sdl_window, SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN ? 0 : SDL_WINDOW_FULLSCREEN);
-			/*
-			else if (os_event.key.keysym.sym == SDLK_w) player_binary_input_forward = true;
-			else if (os_event.key.keysym.sym == SDLK_a) player_binary_input_left = true;
-			else if (os_event.key.keysym.sym == SDLK_s) player_binary_input_backward = true;
-			else if (os_event.key.keysym.sym == SDLK_d) player_binary_input_right = true;
-			*/
+			if (os_event.key.keysym.sym == SDLK_w) local_player::binary_input[0] = true;
+			if (os_event.key.keysym.sym == SDLK_a) local_player::binary_input[1] = true;
+			if (os_event.key.keysym.sym == SDLK_s) local_player::binary_input[2] = true;
+			if (os_event.key.keysym.sym == SDLK_d) local_player::binary_input[3] = true;
 		} else if (os_event.type == SDL_KEYUP) {
-			/*
-			if (os_event.key.keysym.sym == SDLK_w) player_binary_input_forward = false;
-			else if (os_event.key.keysym.sym == SDLK_a) player_binary_input_left = false;
-			else if (os_event.key.keysym.sym == SDLK_s) player_binary_input_backward = false;
-			else if (os_event.key.keysym.sym == SDLK_d) player_binary_input_right = false;
-			*/
+			if (os_event.key.keysym.sym == SDLK_w) local_player::binary_input[0] = false;
+			if (os_event.key.keysym.sym == SDLK_a) local_player::binary_input[1] = false;
+			if (os_event.key.keysym.sym == SDLK_s) local_player::binary_input[2] = false;
+			if (os_event.key.keysym.sym == SDLK_d) local_player::binary_input[3] = false;
 		}
 	}
 	int w, h;
@@ -144,7 +144,6 @@ bool cw::sys::tick() {
 	ImGui_ImplSDL2_NewFrame(sdl_window);
 	ImGui::NewFrame();
 	core::on_imgui();
-	//
 	ImGui::Begin("Engine");
 	ImGui::Text(fmt::format("Frame Delta: {}", variable_time_delta).c_str());
 	ImGui::Text(fmt::format("Frame Time: {}", static_cast<int>(variable_time_delta * 1000.0)).c_str());
@@ -159,7 +158,6 @@ bool cw::sys::tick() {
 	ImGui::Text(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No").c_str());
 	ImGui::Text(fmt::format("Tick: {}", current_tick_iteration).c_str());
 	ImGui::End();
-	//
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(sdl_window);
@@ -234,8 +232,7 @@ int main(int c, char **v) {
 		std::cout << "Failed to create OpenGL context." << std::endl;
 		cw::sys::kill();
 		return 3;
-	}
-	else std::cout << "OpenGL context created: " << glGetString(GL_VERSION) << " (" << glGetString(GL_RENDERER) << ")" << std::endl;
+	} else std::cout << "OpenGL context created: " << glGetString(GL_VERSION) << " (" << glGetString(GL_RENDERER) << ")" << std::endl;
 	static bool glew_init_already = false;
 	if (!glew_init_already) {
 		glewExperimental = true;
