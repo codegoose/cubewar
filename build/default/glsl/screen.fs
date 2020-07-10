@@ -19,9 +19,9 @@ out vec4 final_color;
 
 vec3 get_diffuse(vec2 uv) {
 	vec4 material_coords = texture2D(deferred_material_buffer, uv);
-	if (material_coords.a == 0) return vec3(0.4, 0.5, 1.0); // sky
+	if (material_coords.a == 0) return vec3(153.0 * (1.0 / 255.0), 217.0 * (1.0 / 255.0), 234.0 * (1.0 / 255.0)); // sky
 	vec3 normal = texture2D(deferred_surface_buffer, uv).rgb;
-	float light_power = max(dot(normal, normalize(vec3(0.1, 0.1, 0.8))) * 1.5, 0.82);
+	float light_power = max(dot(normal, normalize(vec3(0.8, 0.25, 1))) * 1.8, 1);
 	if (material_coords.a == 1) return texture(voxel_array, material_coords.rgb).rgb * light_power; // voxel
 	if (material_coords.a == 1000) return texture(x512_array, vec3(material_coords.rg, 0)).rgb * light_power; // mesh
 	if (material_coords.a == 1001) return texture(x512_array, vec3(material_coords.rg, 1)).rgb * light_power; // mesh
