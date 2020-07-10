@@ -9,7 +9,7 @@ std::optional<std::vector<char>> cw::misc::read_file(const std::filesystem::path
 		return std::nullopt;
 	}
 	std::vector<char> content(std::filesystem::file_size(path));
-	if (!content.size()) return { };
+	if (!content.size()) return std::vector<char>();
 	in.read(content.data(), content.size());
 	if (static_cast<size_t>(in.tellg()) == content.size()) {
 		std::cout << "File contents loaded: \"" << path.string() << "\" (" << content.size() << " bytes)" << std::endl;
