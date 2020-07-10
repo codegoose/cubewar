@@ -40,6 +40,7 @@ executable(
 	'voxels.cpp',
 	'textures.cpp',
 	'local_player.cpp',
+	'cfg.cpp',
 	dependencies : [
 		sdl2,
 		winmm,

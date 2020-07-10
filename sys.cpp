@@ -17,6 +17,13 @@
 #include <fmt/format.h>
 
 #include "sys.h"
+#include "cfg.h"
+
+namespace cw {
+	extern std::map<std::string, nlohmann::json> cfg;
+	void load_cfg();
+	void flush_cfg();
+}
 
 namespace cw::sys {
 	bool enable_mouse_grab = false;
@@ -285,6 +292,7 @@ int main(int c, char **v) {
 	}
 	std::cout << "ENet is ready." << std::endl;
 	cw::sys::enet_initialized = true;
+	cw::load_cfg();
 	if (!cw::gpu::initialize()) {
 		cw::sys::kill();
 		return 10;
@@ -298,6 +306,7 @@ int main(int c, char **v) {
 	cw::core::shutdown();
 	cw::physics::shutdown();
 	cw::gpu::shutdown();
+	cw::flush_cfg();
 	cw::sys::kill();
 	return 0;
 }
