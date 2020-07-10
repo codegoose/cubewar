@@ -1,5 +1,5 @@
 // A simple fragment shader path tracer used to visualize 3D textures.
-// Author:	Fredrik Präntare <prantare@gmail.com>
+// Author:	Fredrik Prï¿½ntare <prantare@gmail.com>
 // Date:	11/26/2016
 #version 450 core
 

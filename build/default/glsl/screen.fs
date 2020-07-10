@@ -3,9 +3,9 @@
 layout (binding=0) uniform sampler2D deferred_surface_buffer;
 layout (binding=1) uniform sampler2D deferred_position_buffer;
 layout (binding=2) uniform sampler2D deferred_material_buffer;
-layout (binding=3) uniform sampler2DArray textures_voxels_array;
-layout (binding=4) uniform sampler2DArray textures_256_array;
-layout (binding=5) uniform sampler2DArray textures_512_array;
+layout (binding=3) uniform sampler2DArray voxel_array;
+layout (binding=4) uniform sampler2DArray x256_array;
+layout (binding=5) uniform sampler2DArray x512_array;
 
 uniform float pixel_w;
 uniform float pixel_h;
@@ -21,11 +21,11 @@ vec3 get_diffuse(vec2 uv) {
 	vec4 material_coords = texture2D(deferred_material_buffer, uv);
 	if (material_coords.a == 0) return vec3(0.4, 0.5, 1.0); // sky
 	vec3 normal = texture2D(deferred_surface_buffer, uv).rgb;
-	float light_power = max(dot(normal, normalize(vec3(0.1, 0.1, 0.8))) * 1.5, 0.4);
-	if (material_coords.a == 1) return texture(textures_voxels_array, material_coords.rgb).rgb * light_power; // voxel
-	if (material_coords.a == 1000) return texture(textures_512_array, vec3(material_coords.rg, 0)).rgb * light_power; // mesh
-	if (material_coords.a == 1001) return texture(textures_512_array, vec3(material_coords.rg, 1)).rgb * light_power; // mesh
-	if (material_coords.a == 1002) return texture(textures_256_array, vec3(material_coords.rg, 1)).rgb * light_power; // mesh
+	float light_power = max(dot(normal, normalize(vec3(0.1, 0.1, 0.8))) * 1.5, 0.82);
+	if (material_coords.a == 1) return texture(voxel_array, material_coords.rgb).rgb * light_power; // voxel
+	if (material_coords.a == 1000) return texture(x512_array, vec3(material_coords.rg, 0)).rgb * light_power; // mesh
+	if (material_coords.a == 1001) return texture(x512_array, vec3(material_coords.rg, 1)).rgb * light_power; // mesh
+	if (material_coords.a == 1002) return texture(x256_array, vec3(material_coords.rg, 1)).rgb * light_power; // mesh
 }
 
 float get_depth(vec2 uv) {
@@ -88,7 +88,6 @@ vec3 promo_outline(vec3 color) {
 }
 
 void main() {
-	vec3 position = texture2D(deferred_position_buffer, sh_uv).rgb;
 	final_color = vec4(get_diffuse(sh_uv), 1);
 	// final_color = vec4(promo_outline(final_color.rgb), final_color.a);
 	final_color = vec4(apply_gamma(final_color.rgb), 1);

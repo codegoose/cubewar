@@ -1,6 +1,6 @@
 #pragma once
-#include <glm/geometric.hpp>
-#include <glm/matrix.hpp>
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 
 namespace cw::pov {
 	extern float aspect;

@@ -7,6 +7,7 @@ uniform mat4 world_transform;
 uniform mat4 total_transform;
 
 flat in float encoded_voxel_faces[];
+flat in float voxel_material_id[];
 
 out float sh_depth;
 out vec3 sh_world_position;
@@ -16,6 +17,14 @@ out geometry_data {
 	vec3 normal;
 	vec3 texture_coords;
 } geometry;
+
+{{{ VOXEL TEXTURE INDICES }}}
+
+float voxel_z() {
+	if (voxel_material_id[0] == 1) return vti_gravel;
+	if (voxel_material_id[0] == 2) return vti_grass;
+	if (voxel_material_id[0] == 3) return vti_brick;
+}
 
 void prepare_next_stage_info(vec3 vertex_location) {
 	vec4 this_vertex = gl_in[0].gl_Position + vec4(vertex_location, 0);
@@ -41,7 +50,7 @@ void main() {
 	bool enable_back_face = working_encoded_voxel_faces > 0;
 	if (enable_top_face) {
 		geometry.normal = vec3(0, 0, 1);
-		geometry.texture_coords.z = 1;
+		geometry.texture_coords.z = voxel_z();
 		prepare_next_stage_info(vec3(-.5, -.5, .5));
 		geometry.texture_coords.x = 0;
 		geometry.texture_coords.y = 1;
@@ -67,7 +76,7 @@ void main() {
 	}
 	if (enable_bottom_face) {
 		geometry.normal = vec3(0, 0, -1);
-		geometry.texture_coords.z = 1;
+		geometry.texture_coords.z = voxel_z();
 		prepare_next_stage_info(vec3(-.5, .5, -.5));
 		geometry.texture_coords.x = 0;
 		geometry.texture_coords.y = 0;
@@ -94,7 +103,7 @@ void main() {
 	}
 	if (enable_right_face) {
 		geometry.normal = vec3(1, 0, 0);
-		geometry.texture_coords.z = 1;
+		geometry.texture_coords.z = voxel_z();
 		prepare_next_stage_info(vec3(.5, .5, .5));
 		geometry.texture_coords.x = 1;
 		geometry.texture_coords.y = 0;
@@ -121,7 +130,7 @@ void main() {
 	}
 	if (enable_left_face) {
 		geometry.normal = vec3(-1, 0, 0);
-		geometry.texture_coords.z = 1;
+		geometry.texture_coords.z = voxel_z();
 		prepare_next_stage_info(vec3(-.5, -.5, .5));
 		geometry.texture_coords.x = 1;
 		geometry.texture_coords.y = 0;
@@ -148,7 +157,7 @@ void main() {
 	}
 	if (enable_front_face) {
 		geometry.normal = vec3(0, 1, 0);
-		geometry.texture_coords.z = 1;
+		geometry.texture_coords.z = voxel_z();
 		prepare_next_stage_info(vec3(-.5, .5, .5));
 		geometry.texture_coords.x = 1;
 		geometry.texture_coords.y = 0;
@@ -175,7 +184,7 @@ void main() {
 	}
 	if (enable_back_face) {
 		geometry.normal = vec3(0, -1, 0);
-		geometry.texture_coords.z = 1;
+		geometry.texture_coords.z = voxel_z();
 		prepare_next_stage_info(vec3(-.5, -.5, -.5));
 		geometry.texture_coords.x = 0;
 		geometry.texture_coords.y = 1;

@@ -38,6 +38,8 @@ executable(
 	'core.cpp',
 	'sys.cpp',
 	'voxels.cpp',
+	'textures.cpp',
+	'local_player.cpp',
 	dependencies : [
 		sdl2,
 		winmm,

@@ -2,11 +2,17 @@
 #include "misc.h"
 #include "sys.h"
 #include "pov.h"
+#include "voxels.h"
 
+#include <glm/vec2.hpp>
 #include <iostream>
 #include <filesystem>
 #include <optional>
+#include <map>
+#include <string.h>
 #include <assert.h>
+#include <fmt/format.h>
+#include <magic_enum.hpp>
 
 namespace cw::gpu {
 
@@ -17,6 +23,7 @@ namespace cw::gpu {
 	void print_program_info_log(GLuint id);
 	GLuint make_program_from_shaders(const std::vector<GLuint> &shaders);
 	void print_shader_info_log(GLuint id);
+	void perform_shader_preprocessor(const std::filesystem::path &path, std::vector<char> &content);
 	GLuint make_shader_from_file(const std::filesystem::path &path);
 	std::optional<std::map<std::string, GLuint>> make_programs_from_directory(const std::filesystem::path &path);
 	void make_screen_quad();
@@ -24,6 +31,19 @@ namespace cw::gpu {
 	bool initialize();
 	void shutdown();
 	void render();
+}
+
+namespace cw::textures {
+
+	extern GLuint voxel_array;
+	extern GLuint x256_array;
+	extern GLuint x512_array;
+
+	extern std::map<std::string, int> voxel_indices;
+	extern std::map<std::string, int> x256_indices;
+	extern std::map<std::string, int> x512_indices;
+
+	void load_all();
 }
 
 namespace cw::core {
@@ -73,9 +93,34 @@ void cw::gpu::print_shader_info_log(GLuint id) {
 	std::cout << log.data() << std::endl;
 }
 
+void cw::gpu::perform_shader_preprocessor(const std::filesystem::path &path, std::vector<char> &content) {
+	const char *voxel_vti_constants = "{{{ VOXEL TEXTURE INDICES }}}";
+	std::string copy_of(content.begin(), content.end());
+	auto position = copy_of.find(voxel_vti_constants);
+	if (position == std::string::npos) return;
+	std::cout << "Writing runtime-generated VTI constants to shader: \"" << path.string() << "\"" << std::endl;
+	std::string runtime_vti_reflect;
+	constexpr auto voxel_names = magic_enum::enum_names<voxels::id>();
+	constexpr std::size_t voxel_names_num = magic_enum::enum_count<voxels::id>();
+	for (size_t i = 0; i < voxel_names_num; i++) {
+		const auto name = static_cast<std::string>(voxel_names[i]);
+		if (name == "null") continue;
+		if (textures::voxel_indices.find(name) == textures::voxel_indices.end()) {
+			std::cout << "No matching texture found for VTI: \"" << name << "\"" << std::endl;
+			continue;
+		}
+		const auto new_line = fmt::format("const float vti_{} = {};", name, textures::voxel_indices[name]);
+		runtime_vti_reflect += new_line + "\n";
+		std::cout << " + " << new_line << std::endl;
+	}
+	copy_of.replace(position, strlen(voxel_vti_constants), runtime_vti_reflect);
+	content = std::vector<char>(copy_of.begin(), copy_of.end());
+}
+
 GLuint cw::gpu::make_shader_from_file(const std::filesystem::path &path) {
 	auto content = cw::misc::read_file(path);
 	if (!content) return 0;
+	perform_shader_preprocessor(path, *content);
 	GLenum type;
 	if (path.extension().string() == ".vs") type = GL_VERTEX_SHADER;
 	else if (path.extension().string() == ".fs") type = GL_FRAGMENT_SHADER;
@@ -223,7 +268,8 @@ void cw::gpu::generate_render_targets() {
 }
 
 bool cw::gpu::initialize() {
-	auto result = make_programs_from_directory(sys::bin_path().string() + "glsl/");
+	textures::load_all();
+	auto result = make_programs_from_directory(sys::bin_path().string() + "glsl\\");
 	if (!result) {
 		std::cout << "Failed to create GPU programs." << std::endl;
 		return false;
@@ -278,12 +324,12 @@ void cw::gpu::render() {
 	glBindTexture(GL_TEXTURE_2D, deferred_position_render_target);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, deferred_material_render_target);
-	// glActiveTexture(GL_TEXTURE3);
-	// glBindTexture(GL_TEXTURE_2D_ARRAY, texture_voxel_array);
-	// glActiveTexture(GL_TEXTURE4);
-	// glBindTexture(GL_TEXTURE_2D_ARRAY, texture_256_array);
-	// glActiveTexture(GL_TEXTURE5);
-	// glBindTexture(GL_TEXTURE_2D_ARRAY, texture_512_array);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::voxel_array);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x256_array);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x512_array);
 	glBindVertexArray(screen_quad_vertex_array);
 	glBindBuffer(GL_ARRAY_BUFFER, screen_quad_vertex_buffer);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
