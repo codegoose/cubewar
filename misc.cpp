@@ -19,6 +19,22 @@ std::optional<std::vector<char>> cw::misc::read_file(const std::filesystem::path
 	return std::nullopt;
 }
 
+bool cw::misc::write_file(const std::filesystem::path &path, const std::vector<char> &data) {
+	std::ofstream out(path.string(), std::ios::binary);
+	if (!out.is_open()) {
+		std::cout << "Failed to open file for writing: " << path.string() << std::endl;
+		return false;
+	}
+	out.write(data.data(), data.size());
+	if (out.good()) {
+		std::cout << "Wrote data to file: \"" << path.string() << "\" (" << data.size() << " bytes)" << std::endl;
+		return true;
+	} else {
+		std::cout << "Failed to write data to file: " << path.string() << std::endl;
+		return false;
+	}
+}
+
 std::optional<std::map<std::string, std::vector<std::string>>> cw::misc::map_file_names_and_extensions(const std::filesystem::path &path) {
 	if (!std::filesystem::exists(path)) return std::nullopt;
 	if (!std::filesystem::is_directory(path)) return std::nullopt;
