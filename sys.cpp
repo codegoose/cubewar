@@ -14,10 +14,12 @@
 #include <filesystem>
 #include <vector>
 #include <string.h>
+#include <fmt/format.h>
 
 #include "sys.h"
 
 namespace cw::sys {
+	bool enable_mouse_grab = false;
 	std::vector<std::string> args;
 	bool sdl_initialized = false;
 	SDL_Window *sdl_window = 0;
@@ -47,6 +49,7 @@ namespace cw::core {
 	void shutdown();
 	void on_fixed_step(const double &delta);
 	void on_update(const double &delta, const double &interpolation);
+	void on_relative_mouse_input(int x, int y);
 	void on_imgui();
 }
 
@@ -70,29 +73,29 @@ std::filesystem::path cw::sys::bin_path() {
 bool cw::sys::tick() {
 	SDL_Event os_event;
 	bool quit_signal = false;
+	assert(SDL_SetRelativeMouseMode(enable_mouse_grab ? SDL_TRUE : SDL_FALSE) == 0);
 	while (SDL_PollEvent(&os_event)) {
 		ImGui_ImplSDL2_ProcessEvent(&os_event);
 		if (os_event.type == SDL_QUIT) quit_signal = true;
-		/*
 		else if (os_event.type == SDL_MOUSEMOTION) {
-			if (SDL_GetRelativeMouseMode() != SDL_TRUE) continue;
-			// pov::orientation += glm::fvec2(os_event.motion.xrel, os_event.motion.yrel) * 0.1f;
-		}
-		else if (os_event.type == SDL_KEYDOWN) {
-			if (os_event.key.keysym.sym == SDLK_LCTRL) {
-				if (SDL_GetRelativeMouseMode() == SDL_TRUE) SDL_SetRelativeMouseMode(SDL_FALSE);
-				else SDL_SetRelativeMouseMode(SDL_TRUE);
-			} else if (os_event.key.keysym.sym == SDLK_w) player_binary_input_forward = true;
+			if (enable_mouse_grab) core::on_relative_mouse_input(os_event.motion.xrel, os_event.motion.yrel);
+		} else if (os_event.type == SDL_KEYDOWN) {
+			if (os_event.key.keysym.sym == SDLK_F1 && os_event.key.repeat == 0) enable_mouse_grab = !enable_mouse_grab;
+			if (os_event.key.keysym.sym == SDLK_F2 && os_event.key.repeat == 0) SDL_SetWindowFullscreen(sdl_window, SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_FULLSCREEN ? 0 : SDL_WINDOW_FULLSCREEN);
+			/*
+			else if (os_event.key.keysym.sym == SDLK_w) player_binary_input_forward = true;
 			else if (os_event.key.keysym.sym == SDLK_a) player_binary_input_left = true;
 			else if (os_event.key.keysym.sym == SDLK_s) player_binary_input_backward = true;
 			else if (os_event.key.keysym.sym == SDLK_d) player_binary_input_right = true;
+			*/
 		} else if (os_event.type == SDL_KEYUP) {
+			/*
 			if (os_event.key.keysym.sym == SDLK_w) player_binary_input_forward = false;
 			else if (os_event.key.keysym.sym == SDLK_a) player_binary_input_left = false;
 			else if (os_event.key.keysym.sym == SDLK_s) player_binary_input_backward = false;
 			else if (os_event.key.keysym.sym == SDLK_d) player_binary_input_right = false;
+			*/
 		}
-		*/
 	}
 	int w, h;
 	SDL_GetWindowSize(sdl_window, &w, &h);
@@ -141,6 +144,22 @@ bool cw::sys::tick() {
 	ImGui_ImplSDL2_NewFrame(sdl_window);
 	ImGui::NewFrame();
 	core::on_imgui();
+	//
+	ImGui::Begin("Engine");
+	ImGui::Text(fmt::format("Frame Delta: {}", variable_time_delta).c_str());
+	ImGui::Text(fmt::format("Frame Time: {}", static_cast<int>(variable_time_delta * 1000.0)).c_str());
+	ImGui::Text(fmt::format("Frames Per Second: {}", static_cast<int>(1.0 / variable_time_delta)).c_str());
+	ImGui::Text(fmt::format("Fixed Steps Per Second: {}", fixed_steps_per_second).c_str());
+	ImGui::Text(fmt::format("Performance Frequency: {}", performance_frequency).c_str());
+	ImGui::Text(fmt::format("Last Performance Counter: {}", last_performance_counter).c_str());
+	ImGui::Text(fmt::format("Variable Time Delta: {}", variable_time_delta).c_str());
+	ImGui::Text(fmt::format("Fixed Step Time Delta: {}", fixed_step_time_delta).c_str());
+	ImGui::Text(fmt::format("Performance Counters Per Fixed Step: {}", num_performance_counters_per_fixed_step).c_str());
+	ImGui::Text(fmt::format("Fixed Step Counter Remainder: {}", fixed_step_counter_remainder).c_str());
+	ImGui::Text(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No").c_str());
+	ImGui::Text(fmt::format("Tick: {}", current_tick_iteration).c_str());
+	ImGui::End();
+	//
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(sdl_window);
@@ -192,11 +211,11 @@ void cw::sys::kill() {
 
 int main(int c, char **v) {
 	for (int i = 0; i < c; i++) {
-		std::cout << "v[" << i << "] -> " << v[i] << std::endl;
+		std::cout << "v[" << i << "] -> \"" << v[i] << "\"" << std::endl;
 		cw::sys::args.push_back(v[i]);
 	}
-	std::cout << "Working Area: " << std::filesystem::current_path() << std::endl;
-	std::cout << "Binary Path: " << cw::sys::bin_path() << std::endl;
+	std::cout << "Working Area: \"" << std::filesystem::current_path().string() << "\"" << std::endl;
+	std::cout << "Binary Path: \"" << cw::sys::bin_path().string() << "\"" << std::endl;
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
 		std::cout << "Failed to initialize SDL2." << std::endl;
 		return 1;
@@ -276,10 +295,7 @@ int main(int c, char **v) {
 	cw::physics::initialize();
 	cw::core::initialize();
 	SDL_ShowWindow(cw::sys::sdl_window);
-	if (SDL_GL_SetSwapInterval(-1) != 0) {
-		std::cout << "Immediate late buffer swaps are not supported. Using regular sync." << std::endl;
-		SDL_GL_SetSwapInterval(1);
-	}
+	SDL_GL_SetSwapInterval(0);
 	while (cw::sys::tick());
 	SDL_HideWindow(cw::sys::sdl_window);
 	cw::core::shutdown();

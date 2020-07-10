@@ -12,10 +12,10 @@ std::optional<std::vector<char>> cw::misc::read_file(const std::filesystem::path
 	if (!content.size()) return { };
 	in.read(content.data(), content.size());
 	if (static_cast<size_t>(in.tellg()) == content.size()) {
-		std::cout << "File contents loaded: \"" << path.relative_path().string() << "\" (" << content.size() << " bytes)" << std::endl;
+		std::cout << "File contents loaded: \"" << path.string() << "\" (" << content.size() << " bytes)" << std::endl;
 		return content;
 	}
-	std::cout << "Unable to read entire file contents: \"" << path.relative_path().string() << "\"." << std::endl;
+	std::cout << "Unable to read entire file contents: \"" << path.string() << "\"." << std::endl;
 	return std::nullopt;
 }
 
