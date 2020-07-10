@@ -18,7 +18,7 @@ void cw::physics::initialize() {
 	broadphase_interface = new btDbvtBroadphase;
 	constraint_solver = new btSequentialImpulseConstraintSolver;
 	dynamics_world = new btDiscreteDynamicsWorld(collision_dispatcher, broadphase_interface, constraint_solver, collision_configuration);
-	dynamics_world->setGravity({ 0, -10, 0 });
+	dynamics_world->setGravity({ 0, -15, 0 });
 }
 
 void cw::physics::shutdown() {
