@@ -1,3 +1,9 @@
-build\default\.ninja_deps
-build\default\.ninja_log
-build\default\build.ninja
+build/default/.ninja_deps
+build/default/.ninja_log
+build/default/build.ninja
+build/default/compile_commands.json
+build/default/cubewar.exe
+build/default/cubewar@exe/*
+build/default/meson-info/*
+build/default/meson-logs/*
+build/default/meson-private/*
