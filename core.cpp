@@ -2,11 +2,13 @@
 #include <imgui.h>
 #include <assert.h>
 #include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "sys.h"
 #include "gpu.h"
 #include "physics.h"
 #include "pov.h"
+#include "meshes.h"
 
 namespace cw::core {
 	void initialize();
@@ -92,6 +94,34 @@ void cw::core::on_relative_mouse_input(int x, int y) {
 
 void cw::core::on_deferred_render() {
 	voxels::render();
+	// draw test prop
+	{
+		auto program = gpu::programs["mesh"];
+		auto mesh = meshes::props["SM_Prop_Atm_01"];
+		auto model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(60, 50, 49.5f)) * glm::rotate(glm::radians(90.0f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(0.015f));
+		auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
+		glUseProgram(program);
+		glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(program, "total_transform"), 1, GL_FALSE, glm::value_ptr(total_transform));
+		glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, 1000);
+		glBindVertexArray(mesh.vertex_array);
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.vertex_buffer);
+		glDrawArrays(GL_TRIANGLES, 0, mesh.num_vertices);
+	}
+	// draw test prop
+	{
+		auto program = gpu::programs["mesh"];
+		auto mesh = meshes::props["SM_Prop_Antenna"];
+		auto model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(62, 50, 49.5f)) * glm::rotate(glm::radians(90.0f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(0.015f));
+		auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
+		glUseProgram(program);
+		glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(program, "total_transform"), 1, GL_FALSE, glm::value_ptr(total_transform));
+		glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, 1000);
+		glBindVertexArray(mesh.vertex_array);
+		glBindBuffer(GL_ARRAY_BUFFER, mesh.vertex_buffer);
+		glDrawArrays(GL_TRIANGLES, 0, mesh.num_vertices);
+	}
 }
 
 void cw::core::on_imgui() {
