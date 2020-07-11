@@ -41,6 +41,7 @@ executable(
 	'textures.cpp',
 	'local_player.cpp',
 	'cfg.cpp',
+	'meshes.cpp',
 	dependencies : [
 		sdl2,
 		winmm,

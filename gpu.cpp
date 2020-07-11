@@ -45,6 +45,10 @@ namespace cw::textures {
 	void load_all();
 }
 
+namespace cw::meshes {
+	void load_all();
+}
+
 namespace cw::core {
 	void on_deferred_render();
 }
@@ -263,6 +267,7 @@ void cw::gpu::generate_render_targets() {
 
 bool cw::gpu::initialize() {
 	textures::load_all();
+	meshes::load_all();
 	auto result = make_programs_from_directory(sys::bin_path().string() + "glsl\\");
 	if (!result) {
 		std::cout << "Failed to create GPU programs." << std::endl;
