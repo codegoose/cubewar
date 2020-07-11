@@ -34,7 +34,7 @@ void cw::meshes::load_props() {
 		Assimp::Importer importer;
 		auto scene = importer.ReadFileFromMemory(
 				file_contents->data(), file_contents->size(),
-				aiProcess_FlipUVs | aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_GenBoundingBoxes | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate
+				aiProcess_FlipUVs | aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes | aiProcess_GenBoundingBoxes | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenNormals
 			);
 		if (!scene) {
 			std::cout << "Error while processing prop: " << file.path().string() << std::endl;
