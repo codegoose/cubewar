@@ -42,6 +42,7 @@ executable(
 	'local_player.cpp',
 	'cfg.cpp',
 	'meshes.cpp',
+	'simplex.cpp',
 	dependencies : [
 		sdl2,
 		winmm,
