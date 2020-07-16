@@ -552,9 +552,9 @@ void my_update(const double delta) {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame(goose::sys::sdl_window);
 	ImGui::NewFrame();
-	ImGui::Text(fmt::format("Frame Delta: {}", delta).c_str());
-	ImGui::Text(fmt::format("Frame Time: {}", static_cast<int>(delta * 1000.0)).c_str());
-	ImGui::Text(fmt::format("Frames per Second: {}", static_cast<int>(1.0 / delta)).c_str());
+	ImGui::Text(fmt::format("Frame Delta: {}", delta));
+	ImGui::Text(fmt::format("Frame Time: {}", static_cast<int>(delta * 1000.0)));
+	ImGui::Text(fmt::format("Frames per Second: {}", static_cast<int>(1.0 / delta)));
 	ImGui::SliderFloat("Sharpening", &sharpening_power, 0, 1);
 	ImGui::SliderFloat("Gamma", &gamma_power, 0.5, 3);
 	ImGui::Checkbox("Show Render Buffers", &show_render_buffers);
