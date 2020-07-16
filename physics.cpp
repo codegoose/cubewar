@@ -1,5 +1,8 @@
 #include "physics.h"
 
+#include <glm/vec3.hpp>
+#include <glm/gtc/quaternion.hpp>
+
 namespace cw::physics {
 	btDefaultCollisionConfiguration *collision_configuration = 0;
 	btCollisionDispatcher *collision_dispatcher = 0;
