@@ -6,7 +6,13 @@
 #include "physics.h"
 #include "gpu.h"
 #include "textures.h"
+#include "sys.h"
+#include "misc.h"
+#include "simplex.h"
+#include "materials.h"
+#include "sun.h"
 
+#include <stb_image.h>
 #include <glm/matrix.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -33,11 +39,13 @@ namespace cw::voxels {
 		btRigidBody *body = 0;
 	};
 
-	std::vector<voxel_point> total_point_region(100 * 100 * 100);
+	const int chunk_size = 128;
+	std::vector<voxel_point> total_point_region(chunk_size * chunk_size * chunk_size);
 
 	void prepare_gpu_buffers();
 	void update_gpu_buffers();
 	void render();
+	void render_shadow_map();
 }
 
 void cw::voxels::prepare_gpu_buffers() {
@@ -56,35 +64,35 @@ void cw::voxels::prepare_gpu_buffers() {
 }
 
 void cw::voxels::update_gpu_buffers() {
-	std::cout << "Uploading voxels to GPU..." << std::endl;
-	for (int z = 0; z < 100; z++) {
-		for (int y = 0; y < 100; y++) {
-			for (int x = 0; x < 100; x++) {
-				const int index = (z * 10000) + (y * 100) + x;
-				if (z == 50 && x >= 48 && x <= 52 && y >= 48 && y <= 52) total_point_region[index].id = static_cast<uint16_t>(id::stone);
-				if (z >= 51 && z <= 52 && x >= 49 && x <= 51 && y >= 49 && y <= 51) total_point_region[index].id = static_cast<uint16_t>(id::sandstone);
-				if (z <= 49) total_point_region[index].id = static_cast<uint16_t>(id::sand);
+	for (int z = 0; z < chunk_size; z++) {
+		for (int y = 0; y < chunk_size; y++) {
+			for (int x = 0; x < chunk_size; x++) {
+				const int index = (z * (chunk_size * chunk_size)) + (y * chunk_size) + x;
+				id type = id::null;
+				if (z <= 20 || (x > 10 && x < 20 && y > 10 && y < 20 && z < 40 && z > 20)) type = rand() % 100 < 50 ? id::thing_1 : id::thing_2;
+				if (z == 20 && simplex::noise(x * 0.02f, y * 0.01f) < 0) type = id::null;
+				total_point_region[index].id = static_cast<uint16_t>(type);
 			}
 		}
 	}
 	culled_point_cache.clear();
-	for (int z = 0; z < 100; z++) {
-		for (int y = 0; y < 100; y++) {
-			for (int x = 0; x < 100; x++) {
-				const int index = (z * 10000) + (y * 100) + x;
+	for (int z = 0; z < chunk_size; z++) {
+		for (int y = 0; y < chunk_size; y++) {
+			for (int x = 0; x < chunk_size; x++) {
+				const int index = (z * (chunk_size * chunk_size)) + (y * chunk_size) + x;
 				if (!total_point_region[index].id) continue;
 				int face_data = 63;
 				const int neighbor_index_left = index - 1;
 				const int neighbor_index_right = index + 1;
-				const int neighbor_index_below = index - 10000;
-				const int neighbor_index_above = index + 10000;
-				const int neighbor_index_ahead = index + 100;
-				const int neighbor_index_behind = index - 100;
-				if (z == 99 || total_point_region[neighbor_index_above].id != 0) face_data -= 32;
+				const int neighbor_index_below = index - (chunk_size * chunk_size);
+				const int neighbor_index_above = index + (chunk_size * chunk_size);
+				const int neighbor_index_ahead = index + chunk_size;
+				const int neighbor_index_behind = index - chunk_size;
+				if (z == chunk_size - 1 || total_point_region[neighbor_index_above].id != 0) face_data -= 32;
 				if (z == 0 || total_point_region[neighbor_index_below].id != 0) face_data -= 16;
-				if (x == 99 || total_point_region[neighbor_index_right].id != 0) face_data -= 8;
+				if (x == chunk_size - 1 || total_point_region[neighbor_index_right].id != 0) face_data -= 8;
 				if (x == 0 || total_point_region[neighbor_index_left].id != 0) face_data -= 4;
-				if (y == 99 || total_point_region[neighbor_index_ahead].id != 0) face_data -= 2;
+				if (y == chunk_size - 1 || total_point_region[neighbor_index_ahead].id != 0) face_data -= 2;
 				if (y == 0 || total_point_region[neighbor_index_behind].id != 0) face_data -= 1;
 				if (!face_data) continue;
 				culled_point_cache.push_back({
@@ -118,6 +126,19 @@ void cw::voxels::render() {
 	glUseProgram(gpu::programs["voxels"]);
 	GLint world_transform_location = glGetUniformLocation(gpu::programs["voxels"], "world_transform");
 	GLint total_transform_location = glGetUniformLocation(gpu::programs["voxels"], "total_transform");
+	if (world_transform_location != -1) glUniformMatrix4fv(world_transform_location, 1, GL_FALSE, glm::value_ptr(model));
+	if (total_transform_location != -1) glUniformMatrix4fv(total_transform_location, 1, GL_FALSE, glm::value_ptr(total_transform));
+	glBindVertexArray(primary_vertex_array);
+	glBindBuffer(GL_ARRAY_BUFFER, primary_vertex_buffer);
+	glDrawArrays(GL_POINTS, 0, culled_point_cache.size());
+}
+
+void cw::voxels::render_shadow_map() {
+	auto model = glm::identity<glm::mat4>();
+	auto total_transform = cw::sun::shadow_projection_matrix * cw::sun::shadow_view_matrix * model;
+	glUseProgram(gpu::programs["voxels-shadow-map"]);
+	GLint world_transform_location = glGetUniformLocation(gpu::programs["voxels-shadow-map"], "world_transform");
+	GLint total_transform_location = glGetUniformLocation(gpu::programs["voxels-shadow-map"], "total_transform");
 	if (world_transform_location != -1) glUniformMatrix4fv(world_transform_location, 1, GL_FALSE, glm::value_ptr(model));
 	if (total_transform_location != -1) glUniformMatrix4fv(total_transform_location, 1, GL_FALSE, glm::value_ptr(total_transform));
 	glBindVertexArray(primary_vertex_array);
