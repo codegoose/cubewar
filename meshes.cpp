@@ -54,7 +54,7 @@ void cw::meshes::load_props() {
 				auto material = scene->mMaterials[scene->mMeshes[mesh_index]->mMaterialIndex];
 				aiColor3D diffuse;
 				assert(material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS);
-				auto registered_material_name = fmt::format("{}_mesh_{}", new_prop_name, mesh_index).c_str();
+				auto registered_material_name = fmt::format("{}_mesh_{}", new_prop_name, mesh_index);
 				std::cout << "Registered material \"" << registered_material_name << "\"." << std::endl;
 				materials::registry[registered_material_name] = {
 					{ diffuse.r, diffuse.g, diffuse.b }
