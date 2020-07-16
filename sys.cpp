@@ -165,6 +165,7 @@ bool cw::sys::tick() {
 	ImGui::Text(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No").c_str());
 	ImGui::Text(fmt::format("Tick: {}", current_tick_iteration).c_str());
 	ImGui::End();
+	// ImGui::GetBackgroundDrawList()->AddImage((void *)gpu::shadow_render_target, { 0, 0 }, { 64, 64 }, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, 255));
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(sdl_window);
@@ -229,7 +230,15 @@ int main(int c, char **v) {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	cw::sys::sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1024, 768, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
+	//
+	{
+		int contextFlags = 0;
+		SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &contextFlags);
+		contextFlags |= SDL_GL_CONTEXT_DEBUG_FLAG;
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, contextFlags);
+	}
+	//
+	cw::sys::sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 960, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
 	if (!cw::sys::sdl_window) {
 		cw::sys::kill();
 		return 2;
@@ -250,6 +259,12 @@ int main(int c, char **v) {
 		} else std::cout << "OpenGL extensions wrangled." << std::endl;
 		glew_init_already = true;
 	}
+	//
+	if (GLEW_ARB_debug_output) glDebugMessageCallbackARB([](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const GLvoid *user) {
+		std::cout << message << std::endl;
+	}, 0);
+	else if (GLEW_AMD_debug_output) glDebugMessageCallbackAMD(0, 0);
+	//
 	cw::sys::nvg_context = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
 	if (!cw::sys::nvg_context) {
 		std::cout << "Failed to create NanoVG context." << std::endl;
