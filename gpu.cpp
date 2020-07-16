@@ -54,6 +54,10 @@ namespace cw::textures {
 	void load_all();
 }
 
+namespace cw::sys::preload {
+	void update();
+}
+
 namespace cw::meshes {
 	void load_all();
 }
@@ -172,6 +176,7 @@ std::optional<std::map<std::string, GLuint>> cw::gpu::make_programs_from_directo
 	std::vector<GLuint> all_shaders;
 	bool success = true;
 	for (auto &pair : *map) {
+		sys::preload::update();
 		std::vector<GLuint> shaders;
 		for (auto &extension : pair.second) {
 			auto shader = make_shader_from_file(path.string() + pair.first + extension);
