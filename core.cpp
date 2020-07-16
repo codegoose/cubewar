@@ -44,7 +44,7 @@ namespace cw::gpu {
 }
 
 void cw::core::initialize() {
-	sys::enable_mouse_grab = true;
+	sys::enable_mouse_grab = false;
 	local_player::initialize();
 }
 
