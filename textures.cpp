@@ -77,7 +77,6 @@ void cw::textures::load_voxel() {
 }
 
 void cw::textures::load_general() {
-	// std::cout << "Beginning x256/x512 object texture processing now." << std::endl;
 	auto items = misc::map_file_names_and_extensions(sys::bin_path().string() + "object");
 	if (!items) return;
 	std::map<std::string, std::pair<std::vector<char>, glm::ivec2>> textures_256, textures_512;
