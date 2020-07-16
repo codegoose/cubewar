@@ -18,5 +18,5 @@ in geometry_data {
 void main() {
 	out_deferred_surface = sh_world_normal;
 	out_deferred_position = vec4(sh_world_position, sh_depth);
-	out_deferred_material = vec4(geometry.texture_coords, 1);
+	out_deferred_material = vec4(geometry.texture_coords, 80000);
 }
