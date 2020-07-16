@@ -93,8 +93,8 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	pov::aspect = static_cast<float>(gpu::render_target_size.x) / static_cast<float>(gpu::render_target_size.y);
 	pov::view_matrix = glm::lookAt(pov::eye, pov::center, pov::up);
 	pov::projection_matrix = glm::perspective(pov::field_of_view, pov::aspect, pov::near_plane_distance, pov::far_plane_distance);
-	sun::shadow_view_matrix = glm::lookAt(pov::eye + (glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f)) * 30.0f), pov::eye, pov::up);
-	sun::shadow_projection_matrix = glm::ortho<float>(-30.0f, 30.0f, -30.0f, 30.0f, 0.0f, 60.0f);
+	sun::shadow_view_matrix = glm::lookAt(pov::eye + (glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f)) * 60.0f), pov::eye, pov::up);
+	sun::shadow_projection_matrix = glm::ortho<float>(-60.0f, 60.0f, -60.0f, 60.0f, 0.0f, 120.0f);
 	sun::shadow_matrix = sun::shadow_projection_matrix * sun::shadow_view_matrix;
 }
 

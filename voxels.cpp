@@ -69,8 +69,10 @@ void cw::voxels::update_gpu_buffers() {
 			for (int x = 0; x < chunk_size; x++) {
 				const int index = (z * (chunk_size * chunk_size)) + (y * chunk_size) + x;
 				id type = id::null;
-				if (z <= 20 || (x > 10 && x < 20 && y > 10 && y < 20 && z < 40 && z > 20)) type = rand() % 100 < 50 ? id::thing_1 : id::thing_2;
-				if (z == 20 && simplex::noise(x * 0.02f, y * 0.01f) < 0) type = id::null;
+				if (z <= 20 || (x > 10 && x < 20 && y > 10 && y < 20 && z < 40 && z > 20)) {
+					type = rand() % 100 < 50 ? id::thing_1 : id::thing_2;
+					if (z >= 2 && simplex::noise(x * 0.02f, y * 0.01f, z * 0.01f) < 0) type = id::null;
+				}
 				total_point_region[index].id = static_cast<uint16_t>(type);
 			}
 		}
