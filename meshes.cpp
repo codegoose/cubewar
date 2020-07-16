@@ -24,6 +24,10 @@ namespace cw::meshes {
 	void load_props();
 }
 
+namespace cw::sys::preload {
+	void update();
+}
+
 std::map<std::string, cw::meshes::prop> cw::meshes::props;
 
 void cw::meshes::load_all() {
@@ -33,6 +37,7 @@ void cw::meshes::load_all() {
 void cw::meshes::load_props() {
 	for (auto &section : std::filesystem::directory_iterator(sys::bin_path().string() + "prop")) {
 		for (auto &file : std::filesystem::directory_iterator(section)) {
+			sys::preload::update();
 			auto file_contents = misc::read_file(file.path());
 			if (!file_contents) continue;
 			auto new_prop_name = section.path().stem().string() + "_" + file.path().stem().string();
