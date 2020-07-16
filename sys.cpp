@@ -7,17 +7,22 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl.h>
 #include <enet/enet.h>
-#define NANOVG_GL3_IMPLEMENTATION
-#include <nanovg.h>
-#include <nanovg_gl.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include <glm/vec2.hpp>
 #include <filesystem>
 #include <vector>
-#include <string.h>
+#include <string>
 #include <fmt/format.h>
+#include <sstream>
+#include <filesystem>
+#include <thread>
+#include <csignal>
+#include <map>
 
 #include "sys.h"
 #include "cfg.h"
+#include "misc.h"
 
 namespace cw {
 	extern std::map<std::string, nlohmann::json> cfg;
@@ -31,7 +36,6 @@ namespace cw::sys {
 	bool sdl_initialized = false;
 	SDL_Window *sdl_window = 0;
 	SDL_GLContext gl_context;
-	NVGcontext *nvg_context = 0;
 	ImGuiContext *imgui_context = 0;
 	bool imgui_sdl_impl_initialized = false;
 	bool imgui_opengl3_impl_initialized = false;
@@ -49,6 +53,14 @@ namespace cw::sys {
 	double interpolation_delta = 0;
 	bool tick();
 	void kill();
+	namespace preload {
+		std::map<size_t, int> images;
+		size_t current_image = 0;
+		uint32_t last_update = 0;
+		void begin();
+		void update();
+		void end();
+	}
 }
 
 namespace cw::core {
@@ -152,18 +164,6 @@ bool cw::sys::tick() {
 	ImGui::NewFrame();
 	core::on_imgui();
 	ImGui::Begin("Engine");
-	ImGui::Text(fmt::format("Frame Delta: {}", variable_time_delta).c_str());
-	ImGui::Text(fmt::format("Frame Time: {}", static_cast<int>(variable_time_delta * 1000.0)).c_str());
-	ImGui::Text(fmt::format("Frames Per Second: {}", static_cast<int>(1.0 / variable_time_delta)).c_str());
-	ImGui::Text(fmt::format("Fixed Steps Per Second: {}", fixed_steps_per_second).c_str());
-	ImGui::Text(fmt::format("Performance Frequency: {}", performance_frequency).c_str());
-	ImGui::Text(fmt::format("Last Performance Counter: {}", last_performance_counter).c_str());
-	ImGui::Text(fmt::format("Variable Time Delta: {}", variable_time_delta).c_str());
-	ImGui::Text(fmt::format("Fixed Step Time Delta: {}", fixed_step_time_delta).c_str());
-	ImGui::Text(fmt::format("Performance Counters Per Fixed Step: {}", num_performance_counters_per_fixed_step).c_str());
-	ImGui::Text(fmt::format("Fixed Step Counter Remainder: {}", fixed_step_counter_remainder).c_str());
-	ImGui::Text(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No").c_str());
-	ImGui::Text(fmt::format("Tick: {}", current_tick_iteration).c_str());
 	ImGui::Text(static_cast<std::string>(fmt::format("Frame Delta: {}", variable_time_delta)).c_str());
 	ImGui::Text(static_cast<std::string>(fmt::format("Frame Time: {}", static_cast<int>(variable_time_delta * 1000.0))).c_str());
 	ImGui::Text(static_cast<std::string>(fmt::format("Frames Per Second: {}", static_cast<int>(1.0 / variable_time_delta))).c_str());
@@ -177,7 +177,6 @@ bool cw::sys::tick() {
 	ImGui::Text(static_cast<std::string>(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No")).c_str());
 	ImGui::Text(static_cast<std::string>(fmt::format("Tick: {}", current_tick_iteration)).c_str());
 	ImGui::End();
-	// ImGui::GetBackgroundDrawList()->AddImage((void *)gpu::shadow_render_target, { 0, 0 }, { 64, 64 }, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, 255));
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	SDL_GL_SwapWindow(sdl_window);
@@ -203,10 +202,6 @@ void cw::sys::kill() {
 		ImGui::DestroyContext(imgui_context);
 		std::cout << "Destroyed ImGui context." << std::endl;
 	}
-	if (nvg_context) {
-		nvgDeleteGL3(nvg_context);
-		std::cout << "Destroyed NanoVG context." << std::endl;
-	}
 	if (gl_context) {
 		SDL_GL_DeleteContext(gl_context);
 		std::cout << "Destroyed SDL2 OpenGL context." << std::endl;
@@ -218,13 +213,71 @@ void cw::sys::kill() {
 	imgui_opengl3_impl_initialized = false;
 	imgui_sdl_impl_initialized = false;
 	imgui_context = 0;
-	nvg_context = 0;
 	gl_context = 0;
 	sdl_window = 0;
 	if (sdl_initialized) {
 		SDL_Quit();
 		sdl_initialized = false;
 	}
+}
+
+void cw::sys::preload::begin() {
+	for (auto &file : std::filesystem::directory_iterator(bin_path().string() + "texture\\loading")) {
+		auto file_contents = misc::read_file(file);
+		assert(file_contents);
+		int image_width, image_height, image_channels;
+		unsigned char *image_data = stbi_load_from_memory(
+			reinterpret_cast<unsigned char *>(file_contents->data()),
+			file_contents->size(),
+			&image_width, &image_height, &image_channels, STBI_rgb
+		);
+		assert(image_data);
+		assert(image_channels == 3);
+		GLuint texture;
+		glGenTextures(1, &texture);
+		assert(texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image_width, image_height, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data);
+		stbi_image_free(image_data);
+		int index;
+		std::stringstream(file.path().stem().string()) >> index;
+		images[index] = texture;
+	}
+	SDL_GL_SetSwapInterval(0);
+	SDL_ShowWindow(sdl_window);
+}
+
+void cw::sys::preload::update() {
+	if (SDL_GetTicks() < last_update + 30) return;
+	SDL_Event os_event;
+	SDL_PollEvent(&os_event);
+	int window_size[2];
+	SDL_GetWindowSize(sdl_window, &window_size[0], &window_size[1]);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame(sdl_window);
+	ImGui::NewFrame();
+	auto image_size = ImVec2(270, 270);
+	auto image_position = ImVec2((window_size[0] / 2) - (image_size.x / 2), (window_size[1] / 2) - (image_size.y / 2));
+	auto image_extent = ImVec2(image_position.x + image_size.x, image_position.y + image_size.y);
+	if (current_image >= images.size()) current_image = 0;
+	ImGui::GetBackgroundDrawList()->AddImage(
+		reinterpret_cast<void *>(images[current_image]),
+		image_position, image_extent,
+		ImVec2(0, 0), ImVec2(1, 1),
+		IM_COL32(255, 255, 255, 255));
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	SDL_GL_SwapWindow(sdl_window);
+	last_update = SDL_GetTicks();
+	current_image++;
+}
+
+void cw::sys::preload::end() {
+
 }
 
 int main(int c, char **v) {
@@ -250,7 +303,7 @@ int main(int c, char **v) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, contextFlags);
 	}
 	//
-	cw::sys::sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 960, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
+	cw::sys::sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
 	if (!cw::sys::sdl_window) {
 		cw::sys::kill();
 		return 2;
@@ -273,16 +326,18 @@ int main(int c, char **v) {
 	}
 	//
 	if (GLEW_ARB_debug_output) glDebugMessageCallbackARB([](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const GLvoid *user) {
+		if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return;
 		std::cout << message << std::endl;
 	}, 0);
 	else if (GLEW_AMD_debug_output) glDebugMessageCallbackAMD(0, 0);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	//
-	cw::sys::nvg_context = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
-	if (!cw::sys::nvg_context) {
-		std::cout << "Failed to create NanoVG context." << std::endl;
-		cw::sys::kill();
-		return 5;
-	} else std::cout << "NanoVG context is ready." << std::endl;
+	//cw::sys::nvg_context = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
+	//if (!cw::sys::nvg_context) {
+	//	std::cout << "Failed to create NanoVG context." << std::endl;
+	//	cw::sys::kill();
+	//	return 5;
+	//} else std::cout << "NanoVG context is ready." << std::endl;
 	cw::sys::imgui_context = ImGui::CreateContext();
 	if (!cw::sys::imgui_context) {
 		std::cout << "Failed to create ImGui context." << std::endl;
@@ -319,14 +374,23 @@ int main(int c, char **v) {
 	}
 	std::cout << "ENet is ready." << std::endl;
 	cw::sys::enet_initialized = true;
+	cw::sys::preload::begin();
 	cw::load_cfg();
+	if (auto &display_cfg = cw::cfg["display"]; display_cfg.find("resolution") == display_cfg.end()) {
+		display_cfg["resolution"] = {
+			{ "w", 640 },
+			{ "h", 480 }
+		};
+	}
+	SDL_SetWindowSize(cw::sys::sdl_window, cw::cfg["display"]["resolution"]["w"], cw::cfg["display"]["resolution"]["h"]);
+	SDL_SetWindowPosition(cw::sys::sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	if (!cw::gpu::initialize()) {
 		cw::sys::kill();
 		return 10;
 	}
 	cw::physics::initialize();
 	cw::core::initialize();
-	SDL_ShowWindow(cw::sys::sdl_window);
+	cw::sys::preload::end();
 	SDL_GL_SetSwapInterval(0);
 	while (cw::sys::tick());
 	SDL_HideWindow(cw::sys::sdl_window);
