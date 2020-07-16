@@ -43,6 +43,7 @@ executable(
 	'cfg.cpp',
 	'meshes.cpp',
 	'simplex.cpp',
+	'materials.cpp',
 	dependencies : [
 		sdl2,
 		winmm,
