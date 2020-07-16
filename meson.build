@@ -44,6 +44,7 @@ executable(
 	'meshes.cpp',
 	'simplex.cpp',
 	'materials.cpp',
+	'sun.cpp',
 	dependencies : [
 		sdl2,
 		winmm,
