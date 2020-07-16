@@ -164,6 +164,18 @@ bool cw::sys::tick() {
 	ImGui::Text(fmt::format("Fixed Step Counter Remainder: {}", fixed_step_counter_remainder).c_str());
 	ImGui::Text(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No").c_str());
 	ImGui::Text(fmt::format("Tick: {}", current_tick_iteration).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Frame Delta: {}", variable_time_delta)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Frame Time: {}", static_cast<int>(variable_time_delta * 1000.0))).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Frames Per Second: {}", static_cast<int>(1.0 / variable_time_delta))).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Fixed Steps Per Second: {}", fixed_steps_per_second)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Performance Frequency: {}", performance_frequency)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Last Performance Counter: {}", last_performance_counter)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Variable Time Delta: {}", variable_time_delta)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Fixed Step Time Delta: {}", fixed_step_time_delta)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Performance Counters Per Fixed Step: {}", num_performance_counters_per_fixed_step)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Fixed Step Counter Remainder: {}", fixed_step_counter_remainder)).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Optimal Performance: {}", is_performance_optimal ? "Yes" : "No")).c_str());
+	ImGui::Text(static_cast<std::string>(fmt::format("Tick: {}", current_tick_iteration)).c_str());
 	ImGui::End();
 	// ImGui::GetBackgroundDrawList()->AddImage((void *)gpu::shadow_render_target, { 0, 0 }, { 64, 64 }, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, 255));
 	ImGui::Render();
