@@ -44,6 +44,7 @@ executable(
 	'simplex.cpp',
 	'materials.cpp',
 	'sun.cpp',
+	'net.cpp',
 	dependencies : [
 		sdl2,
 		winmm,

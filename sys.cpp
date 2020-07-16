@@ -30,6 +30,11 @@ namespace cw {
 	void flush_cfg();
 }
 
+namespace cw::net {
+	void process();
+	void shutdown();
+}
+
 namespace cw::sys {
 	bool enable_mouse_grab = false;
 	std::vector<std::string> args;
@@ -157,6 +162,7 @@ bool cw::sys::tick() {
 		const uint64_t progress_towards_next_fixed_step = (fixed_step_performance_counter + num_performance_counters_per_fixed_step) - performance_counter;
 		interpolation_delta = 1.0 - (static_cast<double>(progress_towards_next_fixed_step) / static_cast<double>(num_performance_counters_per_fixed_step));
 	}
+	net::process();
 	core::on_update(variable_time_delta, interpolation_delta);
 	gpu::render();
 	ImGui_ImplOpenGL3_NewFrame();
@@ -398,6 +404,7 @@ int main(int c, char **v) {
 	cw::physics::shutdown();
 	cw::gpu::shutdown();
 	cw::flush_cfg();
+	cw::net::shutdown();
 	cw::sys::kill();
 	return 0;
 }

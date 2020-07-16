@@ -11,6 +11,7 @@
 #include "meshes.h"
 #include "materials.h"
 #include "sun.h"
+#include "net.h"
 
 namespace cw::core {
 	void initialize();
@@ -169,10 +170,35 @@ void cw::core::on_shadow_map_render() {
 }
 
 void cw::core::on_imgui() {
+	static char ip_buffer[16] = { 0 };
+	static int port_buffer = 4302;
+	static bool first = true;
+	if (first) {
+		memcpy(ip_buffer, "localhost", 9);
+		first = false;
+	}
 	ImGui::Begin("Rendering");
 	ImGui::Checkbox("Wireframe", &gpu::enable_wireframe);
 	ImGui::InputFloat3("Eye", &pov::eye.x, 3, ImGuiInputTextFlags_ReadOnly);
 	ImGui::InputFloat2("Orientiation", &pov::orientation.x, 3, ImGuiInputTextFlags_ReadOnly);
 	ImGui::InputFloat3("Look", &pov::look.x, 3, ImGuiInputTextFlags_ReadOnly);
+	ImGui::End();
+	ImGui::Begin("Multiplayer");
+	ImGui::InputText("IP Address", ip_buffer, 15);
+	ImGui::InputInt("Port", &port_buffer);
+	if (ImGui::Button("Connect")) {
+		net::start_connection_attempt(ip_buffer, port_buffer);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Host")) {
+		if (port_buffer < 0 || port_buffer > std::numeric_limits<uint16_t>::max()) std::cout << "Cannot host. Specified port is out of range." << std::endl;
+		else net::become_server(static_cast<uint16_t>(port_buffer));
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Quit")) net::shutdown();
+	if (net::current_state == net::state::idle) ImGui::Text("Status: Idle");
+	else if (net::current_state == net::state::connecting) ImGui::Text("Status: Connecting...");
+	else if (net::current_state == net::state::client) ImGui::Text("Status: Connected!");
+	else if (net::current_state == net::state::server) ImGui::Text("Status: Hosting!");
 	ImGui::End();
 }
