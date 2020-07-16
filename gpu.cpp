@@ -3,8 +3,14 @@
 #include "sys.h"
 #include "pov.h"
 #include "voxels.h"
+#include "materials.h"
+#include "sun.h"
 
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/matrix.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <filesystem>
 #include <optional>
@@ -18,6 +24,8 @@ namespace cw::gpu {
 	bool enable_wireframe = false;
 	GLuint primary_render_buffer = 0, primary_frame_buffer = 0;
 	GLuint deferred_surface_render_target = 0, deferred_position_render_target = 0, deferred_material_render_target = 0;
+	GLuint shadow_render_buffer = 0, shadow_frame_buffer = 0;
+	GLuint shadow_render_target = 0;
 	GLuint screen_quad_vertex_array = 0, screen_quad_vertex_buffer = 0;
 	void print_program_info_log(GLuint id);
 	GLuint make_program_from_shaders(const std::vector<GLuint> &shaders);
@@ -27,6 +35,7 @@ namespace cw::gpu {
 	std::optional<std::map<std::string, GLuint>> make_programs_from_directory(const std::filesystem::path &path);
 	void make_screen_quad();
 	void generate_render_targets();
+	void generate_shadow_render_targets();
 	bool initialize();
 	void shutdown();
 	void render();
@@ -51,6 +60,7 @@ namespace cw::meshes {
 
 namespace cw::core {
 	void on_deferred_render();
+	void on_shadow_map_render();
 }
 
 std::map<std::string, GLuint> cw::gpu::programs;
@@ -98,19 +108,33 @@ void cw::gpu::print_shader_info_log(GLuint id) {
 
 void cw::gpu::perform_shader_preprocessor(const std::filesystem::path &path, std::vector<char> &content) {
 	const char *voxel_vti_constants = "{{{ VOXEL TEXTURE INDICES }}}";
+	const char *material_resolver_code = "{{{ MATERIAL RESOLVER CODE}}}";
 	std::string copy_of(content.begin(), content.end());
-	auto position = copy_of.find(voxel_vti_constants);
-	if (position == std::string::npos) return;
-	std::cout << "Writing runtime-generated VTI constants to shader: \"" << path.string() << "\"" << std::endl;
-	std::string runtime_vti_reflect;
-	for (auto &voxel_texture_name : textures::voxel_indices) {
-		if (voxel_texture_name.first == "null") continue;
-		const auto new_line = fmt::format("const float vti_{} = {};", voxel_texture_name.first, voxel_texture_name.second);
-		runtime_vti_reflect += new_line + "\n";
-		std::cout << " + " << new_line << std::endl;
+	if (auto position = copy_of.find(voxel_vti_constants); position != std::string::npos) {
+		std::cout << "Writing runtime-generated VTI constants to shader: \"" << path.string() << "\"" << std::endl;
+		std::string runtime_vti_reflect;
+		for (auto &voxel_texture_name : textures::voxel_indices) {
+			if (voxel_texture_name.first == "null") continue;
+			const auto new_line = fmt::format("const float vti_{} = {};", voxel_texture_name.first, voxel_texture_name.second);
+			runtime_vti_reflect += new_line + "\n";
+			std::cout << " + " << new_line << std::endl;
+		}
+		copy_of.replace(position, strlen(voxel_vti_constants), runtime_vti_reflect);
+		content = std::vector<char>(copy_of.begin(), copy_of.end());
+	} else if (auto position = copy_of.find(material_resolver_code); position != std::string::npos) {
+		std::cout << "Writing runtime-generated material resolver code to shader: \"" << path.string() << "\"" << std::endl;
+		std::string code;
+		code += "vec3 resolve_material_diffuse(float material_id) {";
+		for (auto material : materials::registry) {
+			auto index = static_cast<size_t>(std::distance(materials::registry.begin(), materials::registry.find(material.first)));
+			auto new_line = fmt::format("if (material_id == {}) return vec3({}, {}, {});", index, material.second.diffuse.r, material.second.diffuse.g, material.second.diffuse.b);
+			std::cout << " + " << new_line << std::endl;
+			code += new_line;
+		}
+		code += "}";
+		copy_of.replace(position, strlen(material_resolver_code), code);
+		content = std::vector<char>(copy_of.begin(), copy_of.end());
 	}
-	copy_of.replace(position, strlen(voxel_vti_constants), runtime_vti_reflect);
-	content = std::vector<char>(copy_of.begin(), copy_of.end());
 }
 
 GLuint cw::gpu::make_shader_from_file(const std::filesystem::path &path) {
@@ -205,6 +229,13 @@ void cw::gpu::make_screen_quad() {
 }
 
 void cw::gpu::generate_render_targets() {
+	if (!primary_frame_buffer) {
+		glGenFramebuffers(1, &primary_frame_buffer);
+		assert(primary_frame_buffer);
+		std::cout << "Generated primary frame buffer for render target. (#" << primary_frame_buffer << ")" << std::endl;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, primary_frame_buffer);
+	//
 	if (!deferred_surface_render_target) {
 		glGenTextures(1, &deferred_surface_render_target);
 		assert(deferred_surface_render_target);
@@ -238,12 +269,7 @@ void cw::gpu::generate_render_targets() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	if (!primary_frame_buffer) {
-		glGenFramebuffers(1, &primary_frame_buffer);
-		assert(primary_frame_buffer);
-		std::cout << "Generated primary frame buffer for render target. (#" << primary_frame_buffer << ")" << std::endl;
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, primary_frame_buffer);
+	//
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, deferred_surface_render_target, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, deferred_position_render_target, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, deferred_material_render_target, 0);
@@ -263,6 +289,42 @@ void cw::gpu::generate_render_targets() {
 		GL_COLOR_ATTACHMENT2
 	};
 	glDrawBuffers(3, fragment_buffers);
+	generate_shadow_render_targets();
+}
+
+void cw::gpu::generate_shadow_render_targets() {
+	if (!shadow_frame_buffer) {
+		glGenFramebuffers(1, &shadow_frame_buffer);
+		assert(shadow_frame_buffer);
+		std::cout << "Generated frame buffer for shadow render target. (#" << shadow_frame_buffer << ")" << std::endl;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow_frame_buffer);
+	//
+	if (!shadow_render_target) {
+		glGenTextures(1, &shadow_render_target);
+		assert(shadow_render_target);
+		std::cout << "Generated texture for shadow render target. (#" << shadow_render_target << ")" << std::endl;
+	}
+	glBindTexture(GL_TEXTURE_2D, shadow_render_target);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, 2048, 2048, 0, GL_RG, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadow_render_target, 0);
+	if (!shadow_render_buffer) {
+		glGenRenderbuffers(1, &shadow_render_buffer);
+		assert(shadow_render_buffer);
+		std::cout << "Generated render buffer for shadow render target. (#" << shadow_render_buffer << ")" << std::endl;
+	}
+	glBindRenderbuffer(GL_RENDERBUFFER, shadow_render_buffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH32F_STENCIL8, 2048, 2048);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, shadow_render_buffer);
+	assert(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE);
+	std::cout << "All shadow render targets are ready. (" << 2048 << " by " << 2048 << ") " << std::endl;
+	GLenum fragment_buffers[] = { GL_COLOR_ATTACHMENT0 };
+	glDrawBuffers(1, fragment_buffers);
 }
 
 bool cw::gpu::initialize() {
@@ -283,6 +345,14 @@ void cw::gpu::shutdown() {
 }
 
 void cw::gpu::render() {
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow_frame_buffer);
+	glClearColor(1, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, 2048, 2048);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	core::on_shadow_map_render();
 	glBindFramebuffer(GL_FRAMEBUFFER, primary_frame_buffer);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -310,12 +380,14 @@ void cw::gpu::render() {
 	GLint gamma_power_location = glGetUniformLocation(programs["screen"], "gamma_power");
 	GLint near_plane_location = glGetUniformLocation(programs["screen"], "near_plane");
 	GLint far_plane_location = glGetUniformLocation(programs["screen"], "far_plane");
+	GLint sun_shadow_matrix_location = glGetUniformLocation(programs["screen"], "sun_shadow_matrix");
 	if (pixel_w_location != -1) glUniform1f(pixel_w_location, 1.f / static_cast<float>(render_target_size.x));
 	if (pixel_h_location != -1) glUniform1f(pixel_h_location, 1.f / static_cast<float>(render_target_size.y));
 	if (saturation_power_location != -1) glUniform1f(saturation_power_location, saturation_power);
 	if (gamma_power_location != -1) glUniform1f(gamma_power_location, gamma_power);
 	if (near_plane_location != -1) glUniform1f(near_plane_location, pov::near_plane_distance);
 	if (far_plane_location != -1) glUniform1f(far_plane_location, pov::far_plane_distance);
+	if (sun_shadow_matrix_location != -1) glUniformMatrix4fv(sun_shadow_matrix_location, 1, GL_FALSE, glm::value_ptr(sun::shadow_matrix));
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, deferred_surface_render_target);
 	glActiveTexture(GL_TEXTURE1);
@@ -328,6 +400,8 @@ void cw::gpu::render() {
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x256_array);
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x512_array);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, shadow_render_target);
 	glBindVertexArray(screen_quad_vertex_array);
 	glBindBuffer(GL_ARRAY_BUFFER, screen_quad_vertex_buffer);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
