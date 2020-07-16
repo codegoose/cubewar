@@ -117,7 +117,7 @@ bool cw::sys::tick() {
 		}
 	}
 	int w, h;
-	SDL_GetWindowSize(sdl_window, &w, &h);
+	SDL_GL_GetDrawableSize(sdl_window, &w, &h);
 	if (!(gpu::render_target_size.x == w && gpu::render_target_size.y == h)) {
 		gpu::render_target_size = { w, h };
 		gpu::generate_render_targets();
@@ -254,7 +254,7 @@ void cw::sys::preload::update() {
 	SDL_Event os_event;
 	SDL_PollEvent(&os_event);
 	int window_size[2];
-	SDL_GetWindowSize(sdl_window, &window_size[0], &window_size[1]);
+	SDL_GL_GetDrawableSize(sdl_window, &window_size[0], &window_size[1]);
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	ImGui_ImplOpenGL3_NewFrame();
