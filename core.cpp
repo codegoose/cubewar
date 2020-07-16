@@ -9,6 +9,8 @@
 #include "physics.h"
 #include "pov.h"
 #include "meshes.h"
+#include "materials.h"
+#include "sun.h"
 
 namespace cw::core {
 	void initialize();
@@ -17,6 +19,7 @@ namespace cw::core {
 	void on_update(const double &delta, const double &interpolation);
 	void on_relative_mouse_input(int x, int y);
 	void on_deferred_render();
+	void on_shadow_map_render();
 	void on_imgui();
 }
 
@@ -32,6 +35,7 @@ namespace cw::local_player {
 
 namespace cw::voxels {
 	void render();
+	void render_shadow_map();
 }
 
 namespace cw::gpu {
@@ -57,20 +61,23 @@ void cw::core::on_fixed_step(const double &delta) {
 	ray_cb.m_collisionFilterGroup = 2;
 	physics::dynamics_world->rayTest(ray_from, ray_to, ray_cb);
 	if (ray_cb.hasHit()) {
+		local_player::rigid_body->setLinearFactor(btVector3(1.0f, 1.0f, 1.0f));
 		local_player::movement_input = { 0, 0 };
 		if (local_player::binary_input[1]) local_player::movement_input.x -= 1;
 		if (local_player::binary_input[3]) local_player::movement_input.x += 1;
-		if (local_player::binary_input[0]) local_player::movement_input.y -= 1;
-		if (local_player::binary_input[2]) local_player::movement_input.y += 1;
+		if (local_player::binary_input[0]) local_player::movement_input.y += 1;
+		if (local_player::binary_input[2]) local_player::movement_input.y -= 1;
+		glm::vec3 bipedal_movement(local_player::movement_input, 0);
 		if (local_player::movement_input.x || local_player::movement_input.y) {
 			local_player::movement_input = glm::normalize(local_player::movement_input) * 5.0f;
-			local_player::movement_input = glm::vec4(local_player::movement_input, 0, 0) * glm::rotate(glm::radians(-cw::pov::orientation.x), glm::vec3(0, 0, 1));
+			bipedal_movement = glm::vec4(local_player::movement_input, 0, 0) * glm::rotate(glm::radians(cw::pov::orientation.x), glm::vec3(0, 0, 1));
+			bipedal_movement.y *= -1.0f;
 		}
 		float diff = 2.5f - (ray_cb.m_rayFromWorld.y() - ray_cb.m_hitPointWorld.y());
 		diff *= 10.0f;
 		auto old_velocity = local_player::rigid_body->getLinearVelocity();
-		local_player::rigid_body->setLinearVelocity(btVector3(local_player::movement_input.x, glm::mix(old_velocity.y(), diff, 0.99f), local_player::movement_input.y));
-	} else local_player::rigid_body->setLinearFactor(btVector3(1, 1, 1));
+		local_player::rigid_body->setLinearVelocity(btVector3(bipedal_movement.x, glm::mix(old_velocity.y(), diff, 0.99f), bipedal_movement.y));
+	} else local_player::rigid_body->setLinearFactor(btVector3(0.5f, 1.0f, 0.5f));
 }
 
 void cw::core::on_update(const double &delta, const double &interpolation) {
@@ -84,7 +91,10 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	pov::center = pov::eye + pov::look;
 	pov::aspect = static_cast<float>(gpu::render_target_size.x) / static_cast<float>(gpu::render_target_size.y);
 	pov::view_matrix = glm::lookAt(pov::eye, pov::center, pov::up);
-	pov::projection_matrix = glm::perspective<float>(pov::field_of_view, pov::aspect, pov::near_plane_distance, pov::far_plane_distance);
+	pov::projection_matrix = glm::perspective(pov::field_of_view, pov::aspect, pov::near_plane_distance, pov::far_plane_distance);
+	sun::shadow_view_matrix = glm::lookAt(pov::eye + (glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f)) * 30.0f), pov::eye, pov::up);
+	sun::shadow_projection_matrix = glm::ortho<float>(-30.0f, 30.0f, -30.0f, 30.0f, 0.0f, 60.0f);
+	sun::shadow_matrix = sun::shadow_projection_matrix * sun::shadow_view_matrix;
 }
 
 void cw::core::on_relative_mouse_input(int x, int y) {
@@ -94,38 +104,75 @@ void cw::core::on_relative_mouse_input(int x, int y) {
 
 void cw::core::on_deferred_render() {
 	voxels::render();
-	// draw test prop
+	auto program = gpu::programs["mesh"];
+	// test
 	{
-		auto program = gpu::programs["mesh"];
-		auto mesh = meshes::props["SM_Prop_Atm_01"];
-		auto model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(60, 50, 49.5f)) * glm::rotate(glm::radians(90.0f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(0.015f));
+		auto prop = meshes::props["future_chair_1"];
+		auto model = glm::identity<glm::mat4>();
+		model *= glm::translate(glm::vec3(64, 64, 20.5f));
+		model *= glm::scale(glm::vec3(0.025f));
 		auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
 		glUseProgram(program);
 		glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(program, "total_transform"), 1, GL_FALSE, glm::value_ptr(total_transform));
-		glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, 1000);
-		glBindVertexArray(mesh.vertex_array);
-		glBindBuffer(GL_ARRAY_BUFFER, mesh.vertex_buffer);
-		glDrawArrays(GL_TRIANGLES, 0, mesh.num_vertices);
+		for (auto &part : prop.parts) {
+			glBindVertexArray(part.array);
+			glBindBuffer(GL_ARRAY_BUFFER, part.buffer);
+			float material_id = static_cast<size_t>(std::distance(materials::registry.begin(), materials::registry.find(part.material_name)));
+			glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, material_id);
+			glDrawArrays(GL_TRIANGLES, 0, part.num_vertices);
+		}
 	}
-	// draw test prop
 	{
-		auto program = gpu::programs["mesh"];
-		auto mesh = meshes::props["SM_Prop_Antenna"];
-		auto model = glm::translate(glm::identity<glm::mat4>(), glm::vec3(62, 50, 49.5f)) * glm::rotate(glm::radians(90.0f), glm::vec3(1, 0, 0)) * glm::scale(glm::vec3(0.015f));
+		auto prop = meshes::props["weapon_launcher"];
+		auto model = glm::identity<glm::mat4>();
+		model *= glm::translate(glm::identity<glm::mat4>(), pov::eye);
+		model *= glm::rotate(glm::radians(-pov::orientation.x), glm::vec3(0, 0, 1));
+		model *= glm::rotate(glm::radians(-pov::orientation.y), glm::vec3(1, 0, 0));
+		model *= glm::scale(glm::vec3(0.4f));
+		model *= glm::translate(glm::vec3(0.5f, 1.5f, -1.7f));
+		// model *= glm::translate(glm::vec3(local_player::movement_input.x, local_player::movement_input.y, 0) * 0.005f);
 		auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
 		glUseProgram(program);
 		glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(program, "total_transform"), 1, GL_FALSE, glm::value_ptr(total_transform));
-		glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, 1000);
-		glBindVertexArray(mesh.vertex_array);
-		glBindBuffer(GL_ARRAY_BUFFER, mesh.vertex_buffer);
-		glDrawArrays(GL_TRIANGLES, 0, mesh.num_vertices);
+		for (auto &part : prop.parts) {
+			glBindVertexArray(part.array);
+			glBindBuffer(GL_ARRAY_BUFFER, part.buffer);
+			float material_id = static_cast<size_t>(std::distance(materials::registry.begin(), materials::registry.find(part.material_name)));
+			glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, material_id);
+			glDrawArrays(GL_TRIANGLES, 0, part.num_vertices);
+		}
+	}
+}
+
+void cw::core::on_shadow_map_render() {
+	voxels::render_shadow_map();
+	//
+	auto program = gpu::programs["mesh-shadow-map"];
+	// test
+	auto prop = meshes::props["future_chair_1"];
+	auto model = glm::identity<glm::mat4>();
+	model *= glm::translate(glm::vec3(64, 64, 20.5f));
+	model *= glm::scale(glm::vec3(0.025f));
+	auto total_transform = sun::shadow_projection_matrix * sun::shadow_view_matrix * model;
+	glUseProgram(program);
+	glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(glGetUniformLocation(program, "total_transform"), 1, GL_FALSE, glm::value_ptr(total_transform));
+	for (auto &part : prop.parts) {
+		glBindVertexArray(part.array);
+		glBindBuffer(GL_ARRAY_BUFFER, part.buffer);
+		float material_id = static_cast<size_t>(std::distance(materials::registry.begin(), materials::registry.find(part.material_name)));
+		glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, material_id);
+		glDrawArrays(GL_TRIANGLES, 0, part.num_vertices);
 	}
 }
 
 void cw::core::on_imgui() {
 	ImGui::Begin("Rendering");
 	ImGui::Checkbox("Wireframe", &gpu::enable_wireframe);
+	ImGui::InputFloat3("Eye", &pov::eye.x, 3, ImGuiInputTextFlags_ReadOnly);
+	ImGui::InputFloat2("Orientiation", &pov::orientation.x, 3, ImGuiInputTextFlags_ReadOnly);
+	ImGui::InputFloat3("Look", &pov::look.x, 3, ImGuiInputTextFlags_ReadOnly);
 	ImGui::End();
 }
