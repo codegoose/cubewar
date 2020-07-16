@@ -18,5 +18,5 @@ void main() {
 	sh_depth = screenspace_coordinates.z;
 	sh_world_position = vec3(world_transform * vec4(in_position, 1));
 	sh_world_normal = normalize(vec3(world_transform * vec4(in_normal, 0)));
-   sh_uv = in_uv;
+	sh_uv = in_uv;
 }
