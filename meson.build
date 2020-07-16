@@ -9,7 +9,6 @@ enet = compiler.find_library('enet')
 fmt = compiler.find_library('fmt')
 imgui = compiler.find_library('imgui')
 freetype = compiler.find_library('freetype')
-nanovg = compiler.find_library('nanovg')
 sdl2 = compiler.find_library('sdl2')
 glew = compiler.find_library('glew')
 opengl32 = compiler.find_library('opengl32')
@@ -56,7 +55,6 @@ executable(
 		glew,
 		opengl32,
 		gdi32,
-		nanovg,
 		imgui,
 		fmt,
 		enet,
