@@ -41,6 +41,15 @@ namespace cw::voxels {
 
 namespace cw::gpu {
 	extern bool enable_wireframe;
+	extern float saturation_power;
+	extern float exposure_power;
+	extern float gamma_power;
+	extern float sharpening_power;
+}
+
+namespace cw::sys {
+	extern bool enable_mouse_grab;
+	extern float mouse_look_sensitivity;
 }
 
 void cw::core::initialize() {
