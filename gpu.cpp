@@ -5,6 +5,7 @@
 #include "voxels.h"
 #include "materials.h"
 #include "sun.h"
+#include "cfg.h"
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -20,8 +21,11 @@
 #include <fmt/format.h>
 
 namespace cw::gpu {
-
 	bool enable_wireframe = false;
+	float saturation_power = 1;
+	float exposure_power = 5;
+	float gamma_power = 1;
+	float sharpening_power = 0;
 	GLuint primary_render_buffer = 0, primary_frame_buffer = 0;
 	GLuint deferred_surface_render_target = 0, deferred_position_render_target = 0, deferred_material_render_target = 0;
 	GLuint shadow_render_buffer = 0, shadow_frame_buffer = 0;
@@ -333,6 +337,15 @@ void cw::gpu::generate_shadow_render_targets() {
 }
 
 bool cw::gpu::initialize() {
+	auto &system_cfg = cfg["system"];
+	if (system_cfg.find("saturation") == system_cfg.end()) system_cfg["saturation"] = saturation_power;
+	saturation_power = system_cfg["saturation"];
+	if (system_cfg.find("exposure") == system_cfg.end()) system_cfg["exposure"] = exposure_power;
+	exposure_power = system_cfg["exposure"];
+	if (system_cfg.find("gamma") == system_cfg.end()) system_cfg["gamma"] = gamma_power;
+	gamma_power = system_cfg["gamma"];
+	if (system_cfg.find("sharpening") == system_cfg.end()) system_cfg["sharpening"] = sharpening_power;
+	sharpening_power = system_cfg["sharpening"];
 	textures::load_all();
 	meshes::load_all();
 	auto result = make_programs_from_directory(sys::bin_path().string() + "glsl\\");
@@ -346,7 +359,11 @@ bool cw::gpu::initialize() {
 }
 
 void cw::gpu::shutdown() {
-
+	auto &system_cfg = cfg["system"];
+	system_cfg["saturation"] = saturation_power;
+	system_cfg["exposure"] = exposure_power;
+	system_cfg["gamma"] = gamma_power;
+	system_cfg["sharpening"] = sharpening_power;
 }
 
 void cw::gpu::render() {
@@ -377,12 +394,12 @@ void cw::gpu::render() {
 	glDisable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glUseProgram(programs["screen"]);
-	static float saturation_power = 1;
-	static float gamma_power = 1.2;
 	GLint pixel_w_location = glGetUniformLocation(programs["screen"], "pixel_w");
 	GLint pixel_h_location = glGetUniformLocation(programs["screen"], "pixel_h");
 	GLint saturation_power_location = glGetUniformLocation(programs["screen"], "saturation_power");
+	GLint exposure_power_location = glGetUniformLocation(programs["screen"], "exposure_power");
 	GLint gamma_power_location = glGetUniformLocation(programs["screen"], "gamma_power");
+	GLint sharpening_power_location = glGetUniformLocation(programs["screen"], "sharpening_power");
 	GLint near_plane_location = glGetUniformLocation(programs["screen"], "near_plane");
 	GLint far_plane_location = glGetUniformLocation(programs["screen"], "far_plane");
 	GLint sun_shadow_matrix_location = glGetUniformLocation(programs["screen"], "sun_shadow_matrix");
@@ -390,6 +407,8 @@ void cw::gpu::render() {
 	if (pixel_h_location != -1) glUniform1f(pixel_h_location, 1.f / static_cast<float>(render_target_size.y));
 	if (saturation_power_location != -1) glUniform1f(saturation_power_location, saturation_power);
 	if (gamma_power_location != -1) glUniform1f(gamma_power_location, gamma_power);
+	if (exposure_power_location != -1) glUniform1f(exposure_power_location, exposure_power);
+	if (sharpening_power_location != -1) glUniform1f(sharpening_power_location, sharpening_power);
 	if (near_plane_location != -1) glUniform1f(near_plane_location, pov::near_plane_distance);
 	if (far_plane_location != -1) glUniform1f(far_plane_location, pov::far_plane_distance);
 	if (sun_shadow_matrix_location != -1) glUniformMatrix4fv(sun_shadow_matrix_location, 1, GL_FALSE, glm::value_ptr(sun::shadow_matrix));
