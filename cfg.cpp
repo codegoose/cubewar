@@ -29,7 +29,7 @@ void cw::flush_cfg() {
 	auto path = sys::bin_path().string() + "cfg\\";
 	for (auto &section : cfg) {
 		std::cout << "Flushing configuration section: \"" << section.first << "\"" << std::endl;
-		auto content = section.second.dump(1);
+		auto content = section.second.dump(1, '\t', true);
 		misc::write_file(path + section.first + ".json", { content.begin(), content.end() });
 	}
 }
