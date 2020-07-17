@@ -99,8 +99,8 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 }
 
 void cw::core::on_relative_mouse_input(int x, int y) {
-	pov::orientation.x += x * 0.1f;
-	pov::orientation.y += y * 0.1f;
+	pov::orientation.x += x * sys::mouse_look_sensitivity;
+	pov::orientation.y += y * sys::mouse_look_sensitivity;
 }
 
 void cw::core::on_deferred_render() {
@@ -179,9 +179,16 @@ void cw::core::on_imgui() {
 	}
 	ImGui::Begin("Rendering");
 	ImGui::Checkbox("Wireframe", &gpu::enable_wireframe);
+	ImGui::SliderFloat("Gamma", &gpu::gamma_power, 0.1, 3);
+	ImGui::SliderFloat("Exposure", &gpu::exposure_power, 0.1, 10);
+	ImGui::SliderFloat("Saturation", &gpu::saturation_power, 0.0, 1.5);
+	ImGui::SliderFloat("Sharpening", &gpu::sharpening_power, 0, 1);
+	ImGui::End();
+	ImGui::Begin("User");
 	ImGui::InputFloat3("Eye", &pov::eye.x, 3, ImGuiInputTextFlags_ReadOnly);
 	ImGui::InputFloat2("Orientiation", &pov::orientation.x, 3, ImGuiInputTextFlags_ReadOnly);
 	ImGui::InputFloat3("Look", &pov::look.x, 3, ImGuiInputTextFlags_ReadOnly);
+	ImGui::SliderFloat("Mouse Look Sensitivity", &sys::mouse_look_sensitivity, 0.001, 1, "%.4f");
 	ImGui::End();
 	ImGui::Begin("Multiplayer");
 	ImGui::InputText("IP Address", ip_buffer, 15);
