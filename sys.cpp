@@ -37,6 +37,7 @@ namespace cw::net {
 
 namespace cw::sys {
 	bool enable_mouse_grab = false;
+	float mouse_look_sensitivity = 0.01;
 	std::vector<std::string> args;
 	bool sdl_initialized = false;
 	SDL_Window *sdl_window = 0;
@@ -382,13 +383,10 @@ int main(int c, char **v) {
 	cw::sys::enet_initialized = true;
 	cw::sys::preload::begin();
 	cw::load_cfg();
-	if (auto &display_cfg = cw::cfg["display"]; display_cfg.find("resolution") == display_cfg.end()) {
-		display_cfg["resolution"] = {
-			{ "w", 640 },
-			{ "h", 480 }
-		};
-	}
-	SDL_SetWindowSize(cw::sys::sdl_window, cw::cfg["display"]["resolution"]["w"], cw::cfg["display"]["resolution"]["h"]);
+	if (auto &system_cfg = cw::cfg["system"]; system_cfg.find("resolution") == system_cfg.end()) system_cfg["resolution"] = { { "w", 640 }, { "h", 480 } };
+	if (auto &system_cfg = cw::cfg["system"]; system_cfg.find("mouse_look_sensitivity") == system_cfg.end()) system_cfg["mouse_look_sensitivity"] = cw::sys::mouse_look_sensitivity;
+	cw::sys::mouse_look_sensitivity = cw::cfg["system"]["mouse_look_sensitivity"];
+	SDL_SetWindowSize(cw::sys::sdl_window, cw::cfg["system"]["resolution"]["w"], cw::cfg["system"]["resolution"]["h"]);
 	SDL_SetWindowPosition(cw::sys::sdl_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	if (!cw::gpu::initialize()) {
 		cw::sys::kill();
@@ -400,6 +398,7 @@ int main(int c, char **v) {
 	SDL_GL_SetSwapInterval(0);
 	while (cw::sys::tick());
 	SDL_HideWindow(cw::sys::sdl_window);
+	cw::cfg["system"]["mouse_look_sensitivity"] = cw::sys::mouse_look_sensitivity;
 	cw::core::shutdown();
 	cw::physics::shutdown();
 	cw::gpu::shutdown();
