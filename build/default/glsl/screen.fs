@@ -10,8 +10,10 @@ layout (binding=6) uniform sampler2D sun_shadow_map;
 
 uniform float pixel_w;
 uniform float pixel_h;
-uniform float saturation_power;
 uniform float gamma_power;
+uniform float exposure_power;
+uniform float saturation_power;
+uniform float sharpening_power;
 uniform float near_plane;
 uniform float far_plane;
 uniform mat4 sun_shadow_matrix;
@@ -28,7 +30,6 @@ float get_depth(vec2 uv) {
 }
 
 vec3 uncharted_tone(vec3 color) {
-	float gamma = 0.45;
 	float A = 0.15;
 	float B = 0.50;
 	float C = 0.10;
@@ -36,12 +37,11 @@ vec3 uncharted_tone(vec3 color) {
 	float E = 0.02;
 	float F = 0.30;
 	float W = 11.2;
-	float exposure = 10;
-	color *= exposure;
+	color *= exposure_power;
 	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
 	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
 	color /= white;
-	color = pow(color, vec3(1. / gamma));
+	color = pow(color, vec3(1. / gamma_power));
 	return color;
 }
 
@@ -202,8 +202,8 @@ vec3 get_diffuse(vec2 uv) {
 		if (world_sun_depth - 0.002 >= shadow_map_sample) light_power = 0.7;
 	}
 	if (material_coords.a == 80000) {
-		return contrastSaturationBrightness(texture(voxel_array, material_coords.rgb), light_power, 1.0, 1.0).rgb;
-	} else return contrastSaturationBrightness(vec4(resolve_material_diffuse(material_coords.a), 1), light_power, 1.0, 1.0).rgb;
+		return contrastSaturationBrightness(texture(voxel_array, material_coords.rgb), light_power, saturation_power, 1.0).rgb;
+	} else return contrastSaturationBrightness(vec4(resolve_material_diffuse(material_coords.a), 1), light_power, saturation_power, 1.0).rgb;
 }
 
 vec3 get_sharpened(vec3 color, vec2 coords) {
@@ -218,9 +218,6 @@ vec3 get_sharpened(vec3 color, vec2 coords) {
 
 void main() {
 	final_color = vec4(get_diffuse(sh_uv).rgb, 1);
-	final_color = vec4((final_color.rgb * 0.8) + (get_sharpened(final_color.rgb, sh_uv) * 0.2), 1);
+	final_color = vec4((final_color.rgb * (1.0 - sharpening_power)) + (get_sharpened(final_color.rgb, sh_uv) * sharpening_power), 1);
 	final_color = vec4(uncharted_tone(final_color.rgb), 1);
-	// final_color = vec4(promo_outline(final_color.rgb), final_color.a);
-	// final_color = vec4((final_color.rgb * 0.5) + (vec4(get_sharpened(final_color.rgb, sh_uv), 1).rgb * 0.5), 1);
-	// final_color = vec4(uncharted_tone(final_color.rgb), 1);
 }
