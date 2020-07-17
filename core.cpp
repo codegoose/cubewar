@@ -202,9 +202,7 @@ void cw::core::on_imgui() {
 	ImGui::Begin("Multiplayer");
 	ImGui::InputText("IP Address", ip_buffer, 15);
 	ImGui::InputInt("Port", &port_buffer);
-	if (ImGui::Button("Connect")) {
-		net::start_connection_attempt(ip_buffer, port_buffer);
-	}
+	if (ImGui::Button("Connect")) net::start_connection_attempt(ip_buffer, port_buffer);
 	ImGui::SameLine();
 	if (ImGui::Button("Host")) {
 		if (port_buffer < 0 || port_buffer > std::numeric_limits<uint16_t>::max()) std::cout << "Cannot host. Specified port is out of range." << std::endl;
