@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 #include <glm/vec3.hpp>
 
 namespace cw::meshes {
