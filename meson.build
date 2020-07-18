@@ -46,6 +46,7 @@ executable(
 	'sun.cpp',
 	'net.cpp',
 	'weapon.cpp',
+	'scene.cpp',
 	dependencies : [
 		sdl2,
 		winmm,
