@@ -45,6 +45,7 @@ executable(
 	'materials.cpp',
 	'sun.cpp',
 	'net.cpp',
+	'weapon.cpp',
 	dependencies : [
 		sdl2,
 		winmm,

@@ -34,6 +34,10 @@ namespace cw::local_player {
 	void shutdown();
 }
 
+namespace cw::weapon {
+	void render_local_player_hud_model();
+}
+
 namespace cw::voxels {
 	void render();
 	void render_shadow_map();
@@ -133,27 +137,7 @@ void cw::core::on_deferred_render() {
 			glDrawArrays(GL_TRIANGLES, 0, part.num_vertices);
 		}
 	}
-	{
-		auto prop = meshes::props["weapon_launcher"];
-		auto model = glm::identity<glm::mat4>();
-		model *= glm::translate(glm::identity<glm::mat4>(), pov::eye);
-		model *= glm::rotate(glm::radians(-pov::orientation.x), glm::vec3(0, 0, 1));
-		model *= glm::rotate(glm::radians(-pov::orientation.y), glm::vec3(1, 0, 0));
-		model *= glm::scale(glm::vec3(0.4f));
-		model *= glm::translate(glm::vec3(0.5f, 1.5f, -1.7f));
-		// model *= glm::translate(glm::vec3(local_player::movement_input.x, local_player::movement_input.y, 0) * 0.005f);
-		auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
-		glUseProgram(program);
-		glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(glGetUniformLocation(program, "total_transform"), 1, GL_FALSE, glm::value_ptr(total_transform));
-		for (auto &part : prop.parts) {
-			glBindVertexArray(part.array);
-			glBindBuffer(GL_ARRAY_BUFFER, part.buffer);
-			float material_id = static_cast<size_t>(std::distance(materials::registry.begin(), materials::registry.find(part.material_name)));
-			glUniform2f(glGetUniformLocation(program, "material_identifier"), 0, material_id);
-			glDrawArrays(GL_TRIANGLES, 0, part.num_vertices);
-		}
-	}
+	weapon::render_local_player_hud_model();
 }
 
 void cw::core::on_shadow_map_render() {
