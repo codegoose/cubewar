@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <vector>
 #include <utility>
 #include <memory>
@@ -11,12 +10,14 @@
 
 namespace cw {
 	struct node {
-		bool needs_recalculation = false;
+		bool updated_this_frame = false;
+		bool needs_local_update = false;
+		bool needs_global_update = false;
 		uint64_t last_update_tick = 0;
 		glm::mat4 local_transform, absolute_transform;
 		std::vector<std::weak_ptr<node>> children;
 		std::weak_ptr<node> parent;
-		glm::vec3 location, scale;
+		glm::vec3 location, scale { 1, 1, 1 };
 		glm::quat orientation;
 		bool inherit_location = true;
 		bool inherit_scale = true;
