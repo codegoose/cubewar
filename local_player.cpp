@@ -1,6 +1,6 @@
+#include "local_player.h"
 #include "physics.h"
-
-#include <glm/vec3.hpp>
+#include "scene.h"
 
 namespace cw::local_player {
 	btMotionState *motion_state = 0;
@@ -13,6 +13,8 @@ namespace cw::local_player {
 	void initialize();
 	void shutdown();
 }
+
+std::shared_ptr<cw::node> cw::local_player::camera_proxy = std::make_shared<cw::node>();
 
 void cw::local_player::initialize() {
 	shutdown();
@@ -27,6 +29,7 @@ void cw::local_player::initialize() {
 	rigid_body->setAngularFactor(0);
 	rigid_body->setActivationState(DISABLE_DEACTIVATION);
 	physics::dynamics_world->addRigidBody(rigid_body, 2, 1);
+	scene::nodes.push_back(camera_proxy);
 
 }
 

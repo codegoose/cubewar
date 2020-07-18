@@ -12,6 +12,8 @@
 #include "materials.h"
 #include "sun.h"
 #include "net.h"
+#include "scene.h"
+#include "local_player.h"
 
 namespace cw::core {
 	void initialize();
@@ -49,6 +51,10 @@ namespace cw::gpu {
 	extern float exposure_power;
 	extern float gamma_power;
 	extern float sharpening_power;
+}
+
+namespace cw::scene {
+	void update(const double &interpolation_delta);
 }
 
 namespace cw::sys {
@@ -100,6 +106,9 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	pov::look = { 0, 1, 0 };
 	if (pov::orientation.y < -85.0f) pov::orientation.y = -85.0f;
 	if (pov::orientation.y > 85.0f) pov::orientation.y = 85.0f;
+	local_player::camera_proxy->location = pov::eye;
+	local_player::camera_proxy->orientation = glm::rotate(glm::radians(-pov::orientation.x), glm::vec3(0, 0, 1)) * glm::rotate(glm::radians(-pov::orientation.y), glm::vec3(1, 0, 0));
+	local_player::camera_proxy->needs_local_update = true;
 	pov::look = glm::vec4(pov::look, 1) * glm::rotate(glm::radians(pov::orientation.y), glm::vec3(1, 0, 0));
 	pov::look = glm::vec4(pov::look, 1) * glm::rotate(glm::radians(pov::orientation.x), glm::vec3(0, 0, 1));
 	pov::center = pov::eye + pov::look;
@@ -109,6 +118,7 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	sun::shadow_view_matrix = glm::lookAt(pov::eye + (glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f)) * 60.0f), pov::eye, pov::up);
 	sun::shadow_projection_matrix = glm::ortho<float>(-60.0f, 60.0f, -60.0f, 60.0f, 0.0f, 120.0f);
 	sun::shadow_matrix = sun::shadow_projection_matrix * sun::shadow_view_matrix;
+	scene::update(interpolation);
 }
 
 void cw::core::on_relative_mouse_input(int x, int y) {
