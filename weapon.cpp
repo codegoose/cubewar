@@ -3,6 +3,8 @@
 #include "gpu.h"
 #include "pov.h"
 #include "materials.h"
+#include "scene.h"
+#include "local_player.h"
 
 #include <algorithm>
 #include <glm/matrix.hpp>
@@ -11,21 +13,25 @@
 #include <glm/vec3.hpp>
 
 namespace cw::weapon {
+	auto hud_node = std::make_shared<node>();
 	void render_local_player_hud_model();
 }
 
 cw::weapon::id cw::weapon::local_player_equipped = cw::weapon::id::null;
 
 void cw::weapon::render_local_player_hud_model() {
+	static bool first = true;
+	if (first) {
+		hud_node->parent = local_player::camera_proxy;
+		local_player::camera_proxy->children.push_back(hud_node);
+		hud_node->location = { 0.5f, 1.5f, -1.7f };
+		hud_node->scale = { 1.0f, 1.0f, 1.0f};
+		hud_node->needs_local_update = true;
+		first = false;
+	}
 	auto program = gpu::programs["mesh"];
 	auto prop = meshes::props["weapon_pdg"];
-	auto model = glm::identity<glm::mat4>();
-	model *= glm::translate(glm::identity<glm::mat4>(), pov::eye);
-	model *= glm::rotate(glm::radians(-pov::orientation.x), glm::vec3(0, 0, 1));
-	model *= glm::rotate(glm::radians(-pov::orientation.y), glm::vec3(1, 0, 0));
-	model *= glm::scale(glm::vec3(0.4f));
-	model *= glm::translate(glm::vec3(0.5f, 1.5f, -1.7f));
-	// model *= glm::translate(glm::vec3(local_player::movement_input.x, local_player::movement_input.y, 0) * 0.005f);
+	auto model = hud_node->absolute_transform;
 	auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
 	glUseProgram(program);
 	glUniformMatrix4fv(glGetUniformLocation(program, "world_transform"), 1, GL_FALSE, glm::value_ptr(model));
