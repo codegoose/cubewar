@@ -11,7 +11,7 @@
 
 namespace cw {
 	struct node {
-		bool needs_recalculation;
+		bool needs_recalculation = false;
 		uint64_t last_update_tick = 0;
 		glm::mat4 local_transform, absolute_transform;
 		std::vector<std::weak_ptr<node>> children;
