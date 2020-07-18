@@ -1,0 +1,1 @@
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/688c3187ad46491eba9a1f3510c50924)](https://www.codacy.com?utm_source=gitlab.com&amp;utm_medium=referral&amp;utm_content=codegoose/cubewar&amp;utm_campaign=Badge_Grade)
