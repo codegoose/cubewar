@@ -186,7 +186,7 @@ vec3 blendColor(vec3 iBaseColor, vec3 iBlendColor) {
 
 vec3 get_diffuse(vec2 uv) {
 	vec4 material_coords = texture2D(deferred_material_buffer, uv);
-	if (material_coords.a == 0) return vec3(153.0 * (1.0 / 255.0), 217.0 * (1.0 / 255.0), 234.0 * (1.0 / 255.0)); // sky
+	if (material_coords.a == 0) return vec3(0, 0, 0); // sky
 	vec3 normal = texture2D(deferred_surface_buffer, uv).rgb;
 	float light_dot = max(dot(normal, normalize(vec3(0.25, 0.25, 1))), 0);
 	float light_power = (0.7 + (light_dot * 1.2));
@@ -199,7 +199,7 @@ vec3 get_diffuse(vec2 uv) {
 	float shadow_map_sample_2 = texture2D(sun_shadow_map, shadow_map_uv.xy + vec2(1.0 / 2048.0, 0)).r;
 	float shadow_map_sample_3 = texture2D(sun_shadow_map, shadow_map_uv.xy - vec2(1.0 / 2048.0, 0)).r;
 	if (shadow_map_uv.x >= 0.0 && shadow_map_uv.x <= 1.0 && shadow_map_uv.y >= 0.0 && shadow_map_uv.y <= 1.0) {
-		if (world_sun_depth - 0.002 >= shadow_map_sample) light_power = 0.7;
+		if (world_sun_depth - 0.0035 >= shadow_map_sample) light_power = 0.7;
 	}
 	if (material_coords.a == 80000) {
 		return contrastSaturationBrightness(texture(voxel_array, material_coords.rgb), light_power, saturation_power, 1.0).rgb;

@@ -11,6 +11,7 @@ flat in float encoded_voxel_faces[];
 out float sh_depth;
 
 void prepare_next_stage_info(vec3 vertex_location) {
+	vertex_location *= 4.0f;
 	vec4 this_vertex = gl_in[0].gl_Position + vec4(vertex_location, 0);
 	vec4 screenspace_coordinates = total_transform * this_vertex;
 	gl_Position = screenspace_coordinates;

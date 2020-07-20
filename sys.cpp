@@ -371,14 +371,12 @@ int main(int c, char **v) {
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	//
-	{
-		int contextFlags = 0;
-		SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &contextFlags);
-		contextFlags |= SDL_GL_CONTEXT_DEBUG_FLAG;
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, contextFlags);
-	}
-	//
+	/*
+	int contextFlags = 0;
+	SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &contextFlags);
+	contextFlags |= SDL_GL_CONTEXT_DEBUG_FLAG;
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, contextFlags);
+	*/
 	cw::sys::sdl_window = SDL_CreateWindow("CubeWar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
 	if (!cw::sys::sdl_window) {
 		cw::sys::kill();
@@ -400,20 +398,14 @@ int main(int c, char **v) {
 		} else std::cout << "OpenGL extensions wrangled." << std::endl;
 		glew_init_already = true;
 	}
-	//
+	/*
 	if (GLEW_ARB_debug_output) glDebugMessageCallbackARB([](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const GLvoid *user) {
 		if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) return;
 		std::cout << message << std::endl;
 	}, 0);
 	else if (GLEW_AMD_debug_output) glDebugMessageCallbackAMD(0, 0);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	//
-	//cw::sys::nvg_context = nvgCreateGL3(NVG_STENCIL_STROKES | NVG_ANTIALIAS);
-	//if (!cw::sys::nvg_context) {
-	//	std::cout << "Failed to create NanoVG context." << std::endl;
-	//	cw::sys::kill();
-	//	return 5;
-	//} else std::cout << "NanoVG context is ready." << std::endl;
+	*/
 	cw::sys::imgui_context = ImGui::CreateContext();
 	if (!cw::sys::imgui_context) {
 		std::cout << "Failed to create ImGui context." << std::endl;
@@ -465,7 +457,7 @@ int main(int c, char **v) {
 	cw::physics::initialize();
 	cw::core::initialize();
 	cw::sys::preload::end();
-	SDL_GL_SetSwapInterval(0);
+	SDL_GL_SetSwapInterval(1);
 	while (cw::sys::tick());
 	SDL_HideWindow(cw::sys::sdl_window);
 	cw::cfg["system"]["mouse_look_sensitivity"] = cw::sys::mouse_look_sensitivity;

@@ -39,7 +39,7 @@ namespace cw::voxels {
 		btRigidBody *body = 0;
 	};
 
-	const int chunk_size = 128;
+	const int chunk_size = 20;
 	std::vector<voxel_point> total_point_region(chunk_size * chunk_size * chunk_size);
 
 	void prepare_gpu_buffers();
@@ -69,9 +69,10 @@ void cw::voxels::update_gpu_buffers() {
 			for (int x = 0; x < chunk_size; x++) {
 				const int index = (z * (chunk_size * chunk_size)) + (y * chunk_size) + x;
 				id type = id::null;
-				if (z <= 20 || (x > 10 && x < 20 && y > 10 && y < 20 && z < 40 && z > 20)) {
-					type = rand() % 100 < 50 ? id::thing_1 : id::thing_2;
-					if (z >= 2 && simplex::noise(x * 0.02f, y * 0.01f, z * 0.01f) < 0) type = id::null;
+				if (z <= 4) type = id::thing_1;
+				else if ((x <= 2 || x >= 18) || (y <= 2 || y >= 18)) {
+					if (z <= 12) type = id::thing_1;
+					else type = simplex::noise(x * 0.1f, y * 0.1f) < 0.0f ? id::thing_1 : id::null;
 				}
 				total_point_region[index].id = static_cast<uint16_t>(type);
 			}
@@ -90,21 +91,29 @@ void cw::voxels::update_gpu_buffers() {
 				const int neighbor_index_above = index + (chunk_size * chunk_size);
 				const int neighbor_index_ahead = index + chunk_size;
 				const int neighbor_index_behind = index - chunk_size;
+				/*
 				if (z == chunk_size - 1 || total_point_region[neighbor_index_above].id != 0) face_data -= 32;
 				if (z == 0 || total_point_region[neighbor_index_below].id != 0) face_data -= 16;
 				if (x == chunk_size - 1 || total_point_region[neighbor_index_right].id != 0) face_data -= 8;
 				if (x == 0 || total_point_region[neighbor_index_left].id != 0) face_data -= 4;
 				if (y == chunk_size - 1 || total_point_region[neighbor_index_ahead].id != 0) face_data -= 2;
 				if (y == 0 || total_point_region[neighbor_index_behind].id != 0) face_data -= 1;
+				 */
+				if (z != chunk_size - 1 && total_point_region[neighbor_index_above].id != 0) face_data -= 32;
+				if (z && total_point_region[neighbor_index_below].id != 0) face_data -= 16;
+				if (x != chunk_size - 1 && total_point_region[neighbor_index_right].id != 0) face_data -= 8;
+				if (x && total_point_region[neighbor_index_left].id != 0) face_data -= 4;
+				if (y != chunk_size - 1 && total_point_region[neighbor_index_ahead].id != 0) face_data -= 2;
+				if (y && total_point_region[neighbor_index_behind].id != 0) face_data -= 1;
 				if (!face_data) continue;
 				culled_point_cache.push_back({
-					static_cast<float>(x), static_cast<float>(y), static_cast<float>(z),
+					static_cast<float>(x) * 4.0f, static_cast<float>(y) * 4.0f, static_cast<float>(z) * 4.0f,
 					static_cast<float>(face_data), static_cast<float>(total_point_region[index].id)
 				});
-				static btBoxShape half_voxel_box_shape(btVector3(0.5, 0.5, 0.5));
+				static btBoxShape half_voxel_box_shape(btVector3(2.0f, 2.0f, 2.0f));
 				btTransform transform;
 				transform.setIdentity();
-				transform.setOrigin(physics::to(glm::vec3(x, y, z)));
+				transform.setOrigin(physics::to(glm::vec3(x, y, z) * 4.0f));
 				total_point_region[index].motion_state = new btDefaultMotionState(transform);
 				total_point_region[index].body = new btRigidBody(0, total_point_region[index].motion_state, &half_voxel_box_shape);
 				physics::dynamics_world->addRigidBody(total_point_region[index].body, 1, 2);

@@ -89,7 +89,7 @@ void cw::core::on_fixed_step(const double &delta) {
 		if (local_player::binary_input[2]) local_player::movement_input.y -= 1;
 		glm::vec3 bipedal_movement(local_player::movement_input, 0);
 		if (local_player::movement_input.x || local_player::movement_input.y) {
-			local_player::movement_input = glm::normalize(local_player::movement_input) * 5.0f;
+			local_player::movement_input = glm::normalize(local_player::movement_input) * 10.0f;
 			bipedal_movement = glm::vec4(local_player::movement_input, 0, 0) * glm::rotate(glm::radians(cw::pov::orientation.x), glm::vec3(0, 0, 1));
 			bipedal_movement.y *= -1.0f;
 		}
@@ -115,7 +115,7 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	pov::aspect = static_cast<float>(gpu::render_target_size.x) / static_cast<float>(gpu::render_target_size.y);
 	pov::view_matrix = glm::lookAt(pov::eye, pov::center, pov::up);
 	pov::projection_matrix = glm::perspective(pov::field_of_view, pov::aspect, pov::near_plane_distance, pov::far_plane_distance);
-	sun::shadow_view_matrix = glm::lookAt(pov::eye + (glm::normalize(glm::vec3(0.25f, 0.25f, 1.0f)) * 60.0f), pov::eye, pov::up);
+	sun::shadow_view_matrix = glm::lookAt(glm::fvec3(40) + (glm::normalize(glm::vec3(0.2f, 0.1f, 1.0f)) * 60.0f), glm::fvec3(40), pov::up);
 	sun::shadow_projection_matrix = glm::ortho<float>(-60.0f, 60.0f, -60.0f, 60.0f, 0.0f, 120.0f);
 	sun::shadow_matrix = sun::shadow_projection_matrix * sun::shadow_view_matrix;
 	scene::update(interpolation);

@@ -2,6 +2,8 @@
 #include "physics.h"
 #include "scene.h"
 
+#include <glm/vec3.hpp>
+
 namespace cw::local_player {
 	btMotionState *motion_state = 0;
 	btCollisionShape *collision_shape = 0;
@@ -20,7 +22,7 @@ void cw::local_player::initialize() {
 	shutdown();
 	btTransform transform;
 	transform.setIdentity();
-	transform.setOrigin(physics::to(glm::vec3(64, 64, 22)));
+	transform.setOrigin(physics::to(glm::vec3(40, 40, 40)));
 	motion_state = new btDefaultMotionState(transform);
 	collision_shape = new btCapsuleShape(0.4f, 2.0f);
 	btVector3 local_inertia;

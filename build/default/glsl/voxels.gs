@@ -21,12 +21,16 @@ out geometry_data {
 {{{ VOXEL TEXTURE INDICES }}}
 
 float voxel_z() {
-	if (voxel_material_id[0] == 1) return vti_thing_1;
-	if (voxel_material_id[0] == 2) return vti_thing_2;
+	const float material_id = voxel_material_id[0];
+	if (material_id == 1 || material_id == 2) {
+		if (geometry.normal == vec3(0, 0, 1) || geometry.normal == vec3(0, 0, -1)) return vti_thing_1;
+		else return vti_thing_2;
+	}
 	return 0;
 }
 
 void prepare_next_stage_info(vec3 vertex_location) {
+	vertex_location *= 4.0f;
 	vec4 this_vertex = gl_in[0].gl_Position + vec4(vertex_location, 0);
 	vec4 screenspace_coordinates = total_transform * this_vertex;
 	gl_Position = screenspace_coordinates;

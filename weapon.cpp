@@ -30,7 +30,7 @@ void cw::weapon::render_local_player_hud_model() {
 		first = false;
 	}
 	auto program = gpu::programs["mesh"];
-	auto prop = meshes::props["weapon_pdg"];
+	auto prop = meshes::props["weapon_launcher"];
 	auto model = hud_node->absolute_transform;
 	auto total_transform = cw::pov::projection_matrix * cw::pov::view_matrix * model;
 	glUseProgram(program);
