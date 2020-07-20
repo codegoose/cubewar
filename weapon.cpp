@@ -24,8 +24,8 @@ void cw::weapon::render_local_player_hud_model() {
 	if (first) {
 		hud_node->parent = local_player::camera_proxy;
 		local_player::camera_proxy->children.push_back(hud_node);
-		hud_node->location = { 0.5f, 1.5f, -1.7f };
-		hud_node->scale = { 1.0f, 1.0f, 1.0f};
+		hud_node->location = { 0.16f, 0.6f, -0.6f };
+		hud_node->scale = { 0.4f, 0.4f, 0.4f };
 		hud_node->needs_local_update = true;
 		first = false;
 	}
