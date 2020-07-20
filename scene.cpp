@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include <glm/matrix.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
