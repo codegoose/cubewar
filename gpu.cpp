@@ -48,9 +48,7 @@ namespace cw::textures {
 
 	extern GLuint x256_array;
 	extern GLuint x512_array;
-
-	extern std::map<std::string, int> x256_indices;
-	extern std::map<std::string, int> x512_indices;
+	extern GLuint x1024_array;
 
 	void load_all();
 }
@@ -405,8 +403,10 @@ void cw::gpu::render() {
 	glBindTexture(GL_TEXTURE_2D, deferred_material_render_target);
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x256_array);
-	glActiveTexture(GL_TEXTURE5);
+	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x512_array);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x1024_array);
 	glActiveTexture(GL_TEXTURE6);
 	glBindTexture(GL_TEXTURE_2D, shadow_render_target);
 	glBindVertexArray(screen_quad_vertex_array);
