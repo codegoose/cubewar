@@ -77,6 +77,15 @@ void cw::meshes::load_props() {
 					}
 				}
 				mesh new_mesh;
+				auto physics_triangle_mesh = new btTriangleMesh();
+				for (size_t phyvi = 0; phyvi < vertices.size(); phyvi += 3) {
+					physics_triangle_mesh->addTriangle(
+						physics::to(vertices[phyvi].position),
+						physics::to(vertices[phyvi + 1].position),
+						physics::to(vertices[phyvi + 2].position)
+					);
+				}
+				new_mesh.triangle_mesh_shape = new btBvhTriangleMeshShape(physics_triangle_mesh, true);
 				new_mesh.material_name = registered_material_name;
 				glGenVertexArrays(1, &new_mesh.array);
 				assert(&new_mesh.array);
