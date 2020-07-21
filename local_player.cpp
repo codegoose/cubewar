@@ -22,9 +22,9 @@ void cw::local_player::initialize() {
 	shutdown();
 	btTransform transform;
 	transform.setIdentity();
-	transform.setOrigin(physics::to(glm::vec3(40, 40, 40)));
+	transform.setOrigin(physics::to(glm::vec3(0, 0, 10)));
 	motion_state = new btDefaultMotionState(transform);
-	collision_shape = new btCapsuleShape(0.4f, 2.0f);
+	collision_shape = new btCapsuleShape(0.65f, 2.0f);
 	btVector3 local_inertia;
 	collision_shape->calculateLocalInertia(1, local_inertia);
 	rigid_body = new btRigidBody(1, motion_state, collision_shape, local_inertia);
