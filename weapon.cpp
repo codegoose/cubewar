@@ -21,9 +21,13 @@ namespace cw::weapon {
 cw::weapon::id cw::weapon::local_player_equipped = cw::weapon::id::null;
 
 void cw::weapon::update(const double &delta) {
+	static float bob_x = 0.0f;
 	auto default_gun_location = glm::vec3(0.45f, 0.7f, -0.4f);
-	glm::fvec3 local_player_velocity_offset = physics::from(local_player::rigid_body->getLinearVelocity()) * local_player::camera_proxy->orientation * -0.002f;
-	auto target_location = default_gun_location + local_player_velocity_offset;
+	auto local_player_velocity = physics::from(local_player::rigid_body->getLinearVelocity());
+	bob_x += glm::max(delta * glm::min(glm::length(glm::fvec3(local_player_velocity.x, local_player_velocity.y, 0)), 1.0f) * 700.0f, delta * 200.0);
+	glm::fvec3 local_player_velocity_offset = local_player_velocity * local_player::camera_proxy->orientation * -0.002f;
+	auto bob_offset = glm::fvec3(0.0f, 0.0f, sinf(glm::radians(bob_x))) * 0.01f * glm::min(glm::length(local_player_velocity), 1.0f);
+	auto target_location = default_gun_location + local_player_velocity_offset + bob_offset;
 	hud_node->location = glm::mix(hud_node->location, target_location, 0.035f);
 	hud_node->needs_local_update = true;
 }
