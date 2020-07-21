@@ -3,9 +3,9 @@
 layout (binding=0) uniform sampler2D deferred_surface_buffer;
 layout (binding=1) uniform sampler2D deferred_position_buffer;
 layout (binding=2) uniform sampler2D deferred_material_buffer;
-layout (binding=3) uniform sampler2DArray voxel_array;
-layout (binding=4) uniform sampler2DArray x256_array;
-layout (binding=5) uniform sampler2DArray x512_array;
+layout (binding=3) uniform sampler2DArray x256_array;
+layout (binding=4) uniform sampler2DArray x512_array;
+layout (binding=5) uniform sampler2DArray x1024_array;
 layout (binding=6) uniform sampler2D sun_shadow_map;
 
 uniform float pixel_w;
@@ -265,7 +265,7 @@ vec3 get_diffuse(vec2 uv) {
 	} else light_power = (0.7 + (light_dot * 2.0));
 	//
 	vec3 texture_color;
-	if (material_coords.a == 80000) texture_color = texture(voxel_array, material_coords.rgb).rgb;
+	if (material_coords.a == 80000) texture_color = texture(x1024_array, material_coords.rgb).rgb;
 	else texture_color = resolve_material_diffuse(material_coords.a);
 	return contrastSaturationBrightness(vec4(texture_color, 1), light_power, saturation_power, 1.0).rgb;
 }

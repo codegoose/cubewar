@@ -36,7 +36,6 @@ executable(
 	'pov.cpp',
 	'core.cpp',
 	'sys.cpp',
-	'voxels.cpp',
 	'textures.cpp',
 	'local_player.cpp',
 	'cfg.cpp',

@@ -42,11 +42,6 @@ namespace cw::weapon {
 	void render_local_player_hud_model();
 }
 
-namespace cw::voxels {
-	void render();
-	void render_shadow_map();
-}
-
 namespace cw::gpu {
 	extern bool enable_wireframe;
 	extern float saturation_power;

@@ -13,7 +13,6 @@
 
 namespace cw::textures {
 
-	GLuint voxel_array = 0;
 	GLuint x256_array = 0;
 	GLuint x512_array = 0;
 
@@ -22,58 +21,13 @@ namespace cw::textures {
 	std::map<std::string, int> x512_indices;
 
 	void load_all();
-	void load_voxel();
 	void load_general();
 	void print_debug_info();
 }
 
 void cw::textures::load_all() {
-	load_voxel();
 	load_general();
 	print_debug_info();
-}
-
-void cw::textures::load_voxel() {
-	const int expected_size = 1024;
-	if (voxel_array) glDeleteTextures(1, &voxel_array);
-	voxel_indices.clear();
-	int num_files = 0;
-	for (auto &i : std::filesystem::directory_iterator(sys::bin_path().string() + "texture\\face")) {
-		if (!std::filesystem::is_regular_file(i)) continue;
-		num_files++;
-	}
-	glGenTextures(1, &voxel_array);
-	assert(voxel_array);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, voxel_array);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB8, expected_size, expected_size, num_files, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-	int index = 0;
-	for (auto &i : std::filesystem::directory_iterator(sys::bin_path().string() + "texture\\face")) {
-		if (!std::filesystem::is_regular_file(i)) continue;
-		auto content = misc::read_file(i.path());
-		if (!content) continue;
-		int w, h, channels;
-		unsigned char *image = stbi_load_from_memory(reinterpret_cast<unsigned char *>(content->data()), content->size(), &w, &h, &channels, STBI_rgb);
-		if (!image) {
-			std::cout << "Unable to resolve file contents to an image: \"" << i.path().string() << "\"" << std::endl;
-			continue;
-		}
-		if (w == expected_size && h == expected_size) {
-			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, index, w, h, 1, GL_RGB, GL_UNSIGNED_BYTE, image);
-			voxel_indices[i.path().stem().string()] = index;
-			index++;
-		} else std::cout << "Skipped loading image due to invalid size: \"" << i.path().string() << "\"" << std::endl;
-		stbi_image_free(image);
-		num_files--;
-		assert(num_files >= 0);
-	}
-	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
-	GLfloat max_anisotropic_filter_value;
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic_filter_value);
-	glTextureParameterf(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropic_filter_value);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 }
 
 void cw::textures::load_general() {
@@ -146,8 +100,6 @@ void cw::textures::load_general() {
 }
 
 void cw::textures::print_debug_info() {
-	std::cout << "Loaded " << voxel_indices.size() << " voxel, " << x256_indices.size() << " x256, " << x512_indices.size() << " x512 textures." << std::endl;
-	for (auto &e : voxel_indices) std::cout << " voxel[" << e.second << "] <- " << e.first << std::endl;
 	for (auto &e : x256_indices) std::cout << " x256[" << e.second << "] <- " << e.first << std::endl;
 	for (auto &e : x512_indices) std::cout << " x512[" << e.second << "] <- " << e.first << std::endl;
 }

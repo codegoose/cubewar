@@ -2,7 +2,6 @@
 #include "misc.h"
 #include "sys.h"
 #include "pov.h"
-#include "voxels.h"
 #include "materials.h"
 #include "sun.h"
 #include "cfg.h"
@@ -47,11 +46,9 @@ namespace cw::gpu {
 
 namespace cw::textures {
 
-	extern GLuint voxel_array;
 	extern GLuint x256_array;
 	extern GLuint x512_array;
 
-	extern std::map<std::string, int> voxel_indices;
 	extern std::map<std::string, int> x256_indices;
 	extern std::map<std::string, int> x512_indices;
 
@@ -115,21 +112,9 @@ void cw::gpu::print_shader_info_log(GLuint id) {
 }
 
 void cw::gpu::perform_shader_preprocessor(const std::filesystem::path &path, std::vector<char> &content) {
-	const char *voxel_vti_constants = "{{{ VOXEL TEXTURE INDICES }}}";
 	const char *material_resolver_code = "{{{ MATERIAL RESOLVER CODE}}}";
 	std::string copy_of(content.begin(), content.end());
-	if (auto position = copy_of.find(voxel_vti_constants); position != std::string::npos) {
-		std::cout << "Writing runtime-generated VTI constants to shader: \"" << path.string() << "\"" << std::endl;
-		std::string runtime_vti_reflect;
-		for (auto &voxel_texture_name : textures::voxel_indices) {
-			if (voxel_texture_name.first == "null") continue;
-			const auto new_line = fmt::format("const float vti_{} = {};", voxel_texture_name.first, voxel_texture_name.second);
-			runtime_vti_reflect += new_line + "\n";
-			std::cout << " + " << new_line << std::endl;
-		}
-		copy_of.replace(position, strlen(voxel_vti_constants), runtime_vti_reflect);
-		content = std::vector<char>(copy_of.begin(), copy_of.end());
-	} else if (auto position = copy_of.find(material_resolver_code); position != std::string::npos) {
+	if (auto position = copy_of.find(material_resolver_code); position != std::string::npos) {
 		std::cout << "Writing runtime-generated material resolver code to shader: \"" << path.string() << "\"" << std::endl;
 		std::string code;
 		code += "vec3 resolve_material_diffuse(float material_id) {";
@@ -419,8 +404,6 @@ void cw::gpu::render() {
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, deferred_material_render_target);
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::voxel_array);
-	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x256_array);
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, textures::x512_array);
