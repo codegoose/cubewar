@@ -24,6 +24,7 @@ namespace cw::core {
 	void on_deferred_render();
 	void on_shadow_map_render();
 	void on_imgui();
+	float black_screen = 1.0f;
 }
 
 namespace cw::local_player {
@@ -119,6 +120,10 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	sun::shadow_projection_matrix = glm::ortho<float>(-60.0f, 60.0f, -60.0f, 60.0f, 0.0f, 120.0f);
 	sun::shadow_matrix = sun::shadow_projection_matrix * sun::shadow_view_matrix;
 	scene::update(interpolation);
+	if (black_screen > 0.0f) {
+		black_screen -= delta * 4.0;
+		if (black_screen < 0.0f) black_screen = 0.0f;
+	}
 }
 
 void cw::core::on_relative_mouse_input(int x, int y) {
@@ -180,6 +185,7 @@ void cw::core::on_imgui() {
 		memcpy(ip_buffer, "localhost", 9);
 		first = false;
 	}
+	if (black_screen > 0.0f) ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0, 0), ImVec2(gpu::render_target_size.x, gpu::render_target_size.y), IM_COL32(0, 0, 0, static_cast<int>(black_screen * 255.0f)));
 	ImGui::Begin("Rendering");
 	ImGui::Checkbox("Wireframe", &gpu::enable_wireframe);
 	ImGui::SliderFloat("Gamma", &gpu::gamma_power, 0.1, 3);
