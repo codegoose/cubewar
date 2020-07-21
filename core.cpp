@@ -38,6 +38,7 @@ namespace cw::local_player {
 }
 
 namespace cw::weapon {
+	void update(const double &delta);
 	void render_local_player_hud_model();
 }
 
@@ -119,6 +120,7 @@ void cw::core::on_update(const double &delta, const double &interpolation) {
 	sun::shadow_view_matrix = glm::lookAt(glm::fvec3(40) + (glm::normalize(glm::vec3(0.2f, 0.1f, 1.0f)) * 60.0f), glm::fvec3(40), pov::up);
 	sun::shadow_projection_matrix = glm::ortho<float>(-60.0f, 60.0f, -60.0f, 60.0f, 0.0f, 120.0f);
 	sun::shadow_matrix = sun::shadow_projection_matrix * sun::shadow_view_matrix;
+	weapon::update(delta);
 	scene::update(interpolation);
 	if (black_screen > 0.0f) {
 		black_screen -= delta * 4.0;
