@@ -11,10 +11,4 @@ Experiments in getting a video game up and running in OpenGL.
 
 ### A first-person shooter.
 
-[![image0](https://i.imgur.com/XcTrKde.png)](https://www.youtube.com/watch?v=su68eHv5b0A)
-
-![image1](https://i.imgur.com/Rl1pbDA.png)
-
-### Visualized render buffers & GUI integration.
-
-![image2](https://i.imgur.com/XF6jDrN.png)
+[![image0](https://i.imgur.com/XcTrKde.png)](https://www.youtube.com/watch?v=su68eHv5b0A) ![image1](https://i.imgur.com/Rl1pbDA.png) ![image2](https://i.imgur.com/XF6jDrN.png)
